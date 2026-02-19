@@ -17,6 +17,10 @@ return new class extends Migration
             $table->string('email')->unique();
             $table->timestamp('email_verified_at')->nullable();
             $table->string('password');
+            $table->boolean('is_propietario')->default(false);
+            $table->boolean('is_alumno')->default(false);
+            $table->boolean('is_tutor')->default(false);
+            $table->enum('estado', ['ACTIVO', 'INACTIVO', 'BLOQUEADO'])->default('ACTIVO');
             $table->rememberToken();
             $table->timestamps();
         });
@@ -35,6 +39,37 @@ return new class extends Migration
             $table->longText('payload');
             $table->integer('last_activity')->index();
         });
+
+
+
+        // 2. Tabla Alumno (1:1 con Usuario)
+        Schema::create('alumno', function (Blueprint $table) {
+            // PK y FK manual porque es 1:1
+            $table->id();
+            $table->string('direccion', 255)->nullable();
+            $table->date('fecha_nacimiento')->nullable();
+            $table->string('nivel_educativo', 50)->nullable();
+            $table->timestamps();
+            $table->unsignedBigInteger('id_usuario')->unique(); // 1:1 con users
+            $table->foreign('id_usuario')
+                  ->references('id')->on('users')
+                  ->onDelete('cascade');
+        });
+
+        // 3. Tabla Tutor (1:1 con Usuario)
+        Schema::create('tutor', function (Blueprint $table) {
+            $table->id();
+            $table->string('especialidad', 100)->nullable();
+            $table->text('biografia')->nullable();
+            $table->string('cv_url', 255)->nullable();
+            $table->string('banco_nombre', 100)->nullable();
+            $table->string('banco_cbu', 50)->nullable();
+            $table->timestamps(); // Aunque tu SQL no lo tenía, Laravel lo requiere para updated_at
+            $table->unsignedBigInteger('id_usuario')->unique(); // 1:1 con users
+            $table->foreign('id_usuario')
+                  ->references('id')->on('users')
+                  ->onDelete('cascade');
+        }); 
     }
 
     /**
@@ -42,8 +77,11 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('users');
+        
         Schema::dropIfExists('password_reset_tokens');
         Schema::dropIfExists('sessions');
+        Schema::dropIfExists('tutor');
+        Schema::dropIfExists('alumno');
+        Schema::dropIfExists('users');
     }
 };

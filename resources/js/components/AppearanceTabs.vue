@@ -9,6 +9,12 @@ const tabs = [
     { value: 'dark', Icon: Moon, label: 'Dark' },
     { value: 'system', Icon: Monitor, label: 'System' },
 ] as const;
+
+const colorThemes = [
+    { value: 'blue', label: 'Azul', color: 'bg-blue-500' },
+    { value: 'green', label: 'Verde', color: 'bg-green-500' },
+    { value: 'purple', label: 'Morado', color: 'bg-purple-500' },
+] as const;
 </script>
 
 <template>
@@ -30,4 +36,24 @@ const tabs = [
             <span class="ml-1.5 text-sm">{{ label }}</span>
         </button>
     </div>
+
+    <div>
+            <h3 class="text-sm font-semibold text-foreground mb-2">Paleta de Colores</h3>
+            <div class="flex gap-2">
+                <button
+                    v-for="theme in colorThemes"
+                    :key="theme.value"
+                    @click="updateAppearance(theme.value)"
+                    :class="[
+                        'flex items-center gap-2 px-3 py-2 rounded-md transition-all border-2',
+                        appearance === theme.value
+                            ? 'border-foreground'
+                            : 'border-transparent hover:border-gray-300 dark:hover:border-gray-600',
+                    ]"
+                >
+                    <div :class="[theme.color, 'h-4 w-4 rounded']" />
+                    <span class="text-sm">{{ theme.label }}</span>
+                </button>
+            </div>
+        </div>
 </template>

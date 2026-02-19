@@ -15,18 +15,25 @@ export function updateTheme(value: Appearance): void {
         return;
     }
 
+    const root = document.documentElement;
+    
+    // Eliminar todas las clases de tema de color
+    root.classList.remove('theme-blue', 'theme-green', 'theme-purple');
+
     if (value === 'system') {
         const mediaQueryList = window.matchMedia(
             '(prefers-color-scheme: dark)',
         );
         const systemTheme = mediaQueryList.matches ? 'dark' : 'light';
-
-        document.documentElement.classList.toggle(
-            'dark',
-            systemTheme === 'dark',
-        );
+        root.classList.toggle('dark', systemTheme === 'dark');
+    } else if (value === 'dark') {
+        root.classList.add('dark');
+    } else if (value === 'light') {
+        root.classList.remove('dark');
     } else {
-        document.documentElement.classList.toggle('dark', value === 'dark');
+        // Para temas de color (blue, green)
+        root.classList.remove('dark');
+        root.classList.add(`theme-${value}`);
     }
 }
 
@@ -101,6 +108,15 @@ export function useAppearance(): UseAppearanceReturn {
             return prefersDark() ? 'dark' : 'light';
         }
 
+        if (appearance.value === 'light') {
+            return 'light';
+        }
+
+        if (appearance.value === 'dark') {
+            return 'dark';
+        }
+
+        // Para temas de color, retornar light por defecto
         return appearance.value;
     });
 
