@@ -27,6 +27,7 @@ const allNavItems: (NavItem & { role?: string[] })[] = [
         title: 'Dashboard',
         href: dashboard(),
         icon: LayoutGrid,
+        role: ['propietario'], // Admin y tutor
     },
 
     {   title: 'Usuarios',
@@ -44,14 +45,14 @@ const allNavItems: (NavItem & { role?: string[] })[] = [
         title: 'Pagos',
         href: route('pagos.index'),
         icon: CreditCard,
-        role: ['alumno','propietario'], // Solo alumno
+        role: ['alumno'], // Solo alumno
 
     },
     {
         title: 'Oferta Academica',
         href:route('calendarios.index'),
         icon: CalendarRange,
-        role: ['propietario'], // Solo alumno
+        role: ['propietario','tutor'], // Solo alumno
     },
     {
         title: 'Reportes',
@@ -72,8 +73,14 @@ const allNavItems: (NavItem & { role?: string[] })[] = [
         role: ['alumno'], // Solo alumno
     },
     {
+        title: 'Mis Sesiones',
+        href: route('sesiones.index'),
+        icon: CalendarRange,
+        role: ['alumno', 'tutor'], // Alumno y tutor
+    },
+    {
         title: 'Ventas',
-        href: dashboard(),
+        href: route('pagos.index'),
         icon: Banknote,
         role: ['propietario'], // Solo admin
     },
@@ -87,7 +94,7 @@ const allNavItems: (NavItem & { role?: string[] })[] = [
         title: 'Licencias',
         href: route('licencias.index'),
         icon: ListTodo,
-        role: ['tutor'], // Solo tutor
+        role: ['tutor','alumno'], // Solo tutor
 
      },
      {

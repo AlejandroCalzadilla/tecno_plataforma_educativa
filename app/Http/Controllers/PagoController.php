@@ -16,6 +16,7 @@ class PagoController extends Controller
     public function index(Request $request): Response
     {
         $user = $request->user();
+        $ventaId = $request->query('venta_id');
 
         if ($user?->is_propietario) {
             $ventas = Venta::query()
@@ -24,8 +25,17 @@ class PagoController extends Controller
                 ->paginate(10, ['*'], 'ventas_page')
                 ->withQueryString();
 
-            $pagos = Pago::query()
-                ->with(['alumno.usuario', 'cuota.venta.inscripcion.calendario.servicio'])
+            $pagosQuery = Pago::query()
+                ->with(['alumno.usuario', 'cuota.venta.inscripcion.calendario.servicio']);
+
+            // Filtrar por venta_id si se proporciona
+            if ($ventaId) {
+                $pagosQuery->whereHas('cuota.venta', function ($query) use ($ventaId) {
+                    $query->where('id', $ventaId);
+                });
+            }
+
+            $pagos = $pagosQuery
                 ->orderByDesc('fecha_pago')
                 ->paginate(10, ['*'], 'pagos_page')
                 ->withQueryString();
@@ -33,6 +43,7 @@ class PagoController extends Controller
             return Inertia::render('Pagos/IndexPropietario', [
                 'ventas' => $ventas,
                 'pagos' => $pagos,
+                'ventaId' => $ventaId,
             ]);
         }
 
