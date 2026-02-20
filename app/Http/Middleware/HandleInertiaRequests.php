@@ -40,14 +40,24 @@ class HandleInertiaRequests extends Middleware
             ...parent::share($request),
             'name' => config('app.name'),
             'auth' => [
-                'user' => $request->user(),
+                'user' => $request->user() ? [
+                    'id' => $request->user()->id,
+                    'name' => $request->user()->name,
+                    'email' => $request->user()->email,
+                    // Agregamos esto para facilitar el acceso en Vue
+                    'roles' => [
+                        'propietario' => (bool) $request->user()->is_propietario,
+                        'tutor' => (bool) $request->user()->is_tutor,
+                        'alumno' => (bool) $request->user()->is_alumno,
+                    ],
+                ] : null,
             ],
             'ziggy' => function () use ($request) {
-            return array_merge((new Ziggy)->toArray(), [
-                'location' => $request->url(),
-            ]);
-        },
-            'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',
+                return array_merge((new Ziggy)->toArray(), [
+                    'location' => $request->url(),
+                ]);
+            },
+            'sidebarOpen' => !$request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',
         ];
 
     }

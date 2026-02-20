@@ -9,8 +9,15 @@ class Inscripcion extends Model
     protected $table = 'inscripcion';
     protected $primaryKey = 'id';
     protected $fillable = [
-        'id_alumno', 'id_servicio', 'fecha_alta', 
-        'estado_academico', 'calificacion_final'
+        'id_alumno',
+        'id_calendario',
+        'fecha_inscripcion',
+        'estado_academico',
+        'calificacion_final',
+    ];
+
+    protected $casts = [
+        'fecha_inscripcion' => 'datetime',
     ];
 
     public function alumno()
@@ -23,12 +30,12 @@ class Inscripcion extends Model
     // Una inscripción tiene UNA venta asociada
     public function venta()
     {
-        return $this->hasOne(Venta::class, 'id_inscripcion', 'id_inscripcion');
+        return $this->hasOne(Venta::class, 'id_inscripcion', 'id');
     }
 
-    public function asistencias()
+    public function sesionesProgramadas()
     {
-        return $this->hasMany(Asistencia::class, 'id_inscripcion');
+        return $this->hasMany(SesionProgramada::class, 'id_inscripcion', 'id');
     }
 
     public function calendario()

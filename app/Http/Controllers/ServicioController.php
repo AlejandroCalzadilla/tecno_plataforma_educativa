@@ -60,11 +60,9 @@ class ServicioController extends Controller
         $validated = $request->validate([
             'nombre' => 'required|string|max:150',
             'id_categoria' => 'required|exists:categorianivel,id', // Valida que la FK exista
-            'costo_base' => 'required|numeric|min:0',
+
             'modalidad' => 'required|in:VIRTUAL,PRESENCIAL,HIBRIDO',
             'descripcion' => 'nullable|string',
-            'duracion_semanas' => 'nullable|integer',
-            'duracion_horas' => 'nullable|integer',
         ]);
 
         // B. Creación
@@ -98,11 +96,9 @@ class ServicioController extends Controller
         $validated = $request->validate([
             'nombre' => 'required|string|max:150',
             'id_categoria' => 'required|exists:categorianivel,id',
-            'costo_base' => 'required|numeric|min:0',
             'modalidad' => 'required|in:VIRTUAL,PRESENCIAL,HIBRIDO',
             'descripcion' => 'nullable|string',
-            'duracion_semanas' => 'nullable|integer',
-            'duracion_horas' => 'nullable|integer',
+
         ]);
 
         $servicio->update($validated);

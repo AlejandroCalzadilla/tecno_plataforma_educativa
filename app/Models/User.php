@@ -34,6 +34,7 @@ class User extends Authenticatable
         'two_factor_secret',
         'two_factor_recovery_codes',
         'remember_token',
+       
     ];
 
     /**
@@ -48,5 +49,31 @@ class User extends Authenticatable
             'password' => 'hashed',
             'two_factor_confirmed_at' => 'datetime',
         ];
+    }
+
+    public function tutor()
+    {
+        return $this->hasOne(Tutor::class, 'id_usuario', 'id');
+    }
+
+    public function alumno()
+    {
+        return $this->hasOne(Alumno::class, 'id_usuario', 'id');
+    }
+    // app/Models/User.php
+
+    public function isAdmin(): bool
+    {
+        return (bool) $this->is_propietario;
+    }
+
+    public function isTutor(): bool
+    {
+        return (bool) $this->is_tutor;
+    }
+
+    public function isAlumno(): bool
+    {
+        return (bool) $this->is_alumno;
     }
 }

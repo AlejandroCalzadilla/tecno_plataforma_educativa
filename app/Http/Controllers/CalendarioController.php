@@ -3,24 +3,21 @@
 namespace App\Http\Controllers;
 
 use App\Models\Calendario;
+use App\Models\Disponibilidad;
 use App\Models\Servicio;
-use App\Models\Horario;
 use App\Models\Tutor;
 use Inertia\Inertia;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Redirect;
+use Illuminate\Support\Facades\DB;
 
 class CalendarioController extends Controller
 {
-    /**
-     * 1. INDEX: Muestra la lista de calendarios.
-     */
     public function index(Request $request)
     {
-        $query = Calendario::with(['servicio', 'tutor', 'horarios'])
+        $query = Calendario::with(['servicio', 'tutor.usuario', 'disponibilidades'])
             ->orderBy('created_at', 'desc');
 
-        // Filtro por búsqueda (nombre de servicio)
         if ($request->filled('search')) {
             $search = $request->input('search');
             $query->whereHas('servicio', function ($q) use ($search) {
@@ -28,146 +25,161 @@ class CalendarioController extends Controller
             });
         }
 
-        // Filtro por servicio
         if ($request->filled('id_servicio')) {
             $query->where('id_servicio', $request->input('id_servicio'));
         }
 
-        // Filtro por tutor
         if ($request->filled('id_tutor')) {
             $query->where('id_tutor', $request->input('id_tutor'));
         }
 
-        $calendarios = $query->paginate(10);
+        if ($request->filled('tipo_programacion')) {
+            $query->where('tipo_programacion', $request->input('tipo_programacion'));
+        }
+
+        $calendarios = $query->paginate(10)->withQueryString();
         $servicios = Servicio::all();
-        $tutores = Tutor::all();
-        $horarios = Horario::all();
+        $tutores = Tutor::with('usuario:id,name')->get();
 
         return Inertia::render('Calendarios/Index', [
             'calendarios' => $calendarios,
             'servicios' => $servicios,
             'tutores' => $tutores,
-            'horarios' => $horarios,
-            'filters' => $request->only(['search', 'id_servicio', 'id_tutor']),
+            'filters' => $request->only(['search', 'id_servicio', 'id_tutor', 'tipo_programacion']),
         ]);
     }
 
-    /**
-     * 2. CREATE: Muestra el formulario de creación.
-     */
     public function create()
     {
-        
         $servicios = Servicio::all();
-        $tutores = Tutor::all();
-        $horarios = Horario::all();
+        $tutores = Tutor::with('usuario:id,name')->get();
 
         return Inertia::render('Calendarios/Create', [
             'servicios' => $servicios,
             'tutores' => $tutores,
-            'horarios' => $horarios,
         ]);
     }
 
-    /**
-     * 3. STORE: Guarda el nuevo calendario en la BD.
-     */
     public function store(Request $request)
     {
-        // A. Validación
         $validated = $request->validate([
             'id_servicio' => 'required|exists:servicio,id',
             'id_tutor' => 'required|exists:tutor,id',
-            'costo_base' => 'required|numeric|min:0',
-            'cupos_MAX' => 'required|integer|min:1',
-            'horarios' => 'required|array|min:1',
-            'horarios.*' => 'exists:horario,id',
+            'tipo_programacion' => 'required|in:CITA_LIBRE,PAQUETE_FIJO',
+            'numero_sesiones' => 'nullable|integer|min:1|required_if:tipo_programacion,PAQUETE_FIJO',
+            'duracion_sesion_minutos' => 'required|integer|min:15',
+            'costo_total' => 'required|numeric|min:0',
+            'cupos_maximos' => 'required|integer|min:1',
+            'disponibilidades' => 'required|array|min:1',
+            'disponibilidades.*.dia_semana' => 'required|in:LUNES,MARTES,MIERCOLES,JUEVES,VIERNES,SABADO,DOMINGO',
+            'disponibilidades.*.hora_apertura' => 'required|date_format:H:i',
+            'disponibilidades.*.hora_cierre' => 'required|date_format:H:i|after:disponibilidades.*.hora_apertura',
         ], [
-            'horarios.required' => 'Debes seleccionar al menos un horario.',
-            'horarios.min' => 'Debes seleccionar al menos un horario.',
+            'disponibilidades.required' => 'Debes registrar al menos una disponibilidad.',
+            'disponibilidades.min' => 'Debes registrar al menos una disponibilidad.',
+            'numero_sesiones.required_if' => 'El número de sesiones es obligatorio para paquetes fijos.',
+            
         ]);
 
-        // B. Validar que no haya conflicto de horarios con el tutor
-        if (!$this->validarHorariosDisponibles($validated['id_tutor'], $validated['horarios'])) {
+        if ($this->tieneCruceDisponibilidadTutor($validated['id_tutor'], $validated['disponibilidades'])) {
             return Redirect::back()
-                ->with('error', 'El tutor tiene conflicto de horarios. Selecciona horarios sin conflicto.');
+                ->withErrors(['disponibilidades' => 'El tutor tiene conflicto de disponibilidad en uno o más rangos.'])
+                ->withInput();
         }
 
-        // C. Creación
-        $calendario = Calendario::create([
-            'id_servicio' => $validated['id_servicio'],
-            'id_tutor' => $validated['id_tutor'],
-            'costo_base' => $validated['costo_base'],
-            'cupos_MAX' => $validated['cupos_MAX'],
-            'cupos_actual' => 0,
-        ]);
+        DB::transaction(function () use ($validated) {
+            $isPaquete = $validated['tipo_programacion'] === 'PAQUETE_FIJO';
 
-        // D. Vincular horarios (relación N:M)
-        $calendario->horarios()->attach($validated['horarios']);
-
-        // E. Redirección con Mensaje Flash
+            $calendario = Calendario::create([
+                'id_servicio' => $validated['id_servicio'],
+                'id_tutor' => $validated['id_tutor'],
+                'tipo_programacion' => $validated['tipo_programacion'],
+                'numero_sesiones' => $isPaquete ? $validated['numero_sesiones'] : null,
+                'duracion_sesion_minutos' => $validated['duracion_sesion_minutos'],
+                'costo_total' => $validated['costo_total'],
+                'cupos_maximos' => $validated['cupos_maximos'],
+            ]);
+            $rows = collect($validated['disponibilidades'])
+                ->map(fn ($item) => [
+                    'id_calendario' => $calendario->id,
+                    'dia_semana' => $item['dia_semana'],
+                    'hora_apertura' => $item['hora_apertura'],
+                    'hora_cierre' => $item['hora_cierre'],
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ])->all();
+            Disponibilidad::insert($rows);
+        });
         return Redirect::route('calendarios.index')->with('success', 'Calendario creado correctamente.');
     }
 
-    /**
-     * 4. EDIT: Muestra el formulario de edición con datos cargados.
-     */
     public function edit(Calendario $calendario)
     {
-        $calendario->load(['horarios']);
+        $calendario->load(['disponibilidades']);
         $servicios = Servicio::all();
-        $tutores = Tutor::all();
-        $horarios = Horario::all();
+        $tutores = Tutor::with('usuario:id,name')->get();
 
         return Inertia::render('Calendarios/Edit', [
             'calendario' => $calendario,
             'servicios' => $servicios,
             'tutores' => $tutores,
-            'horarios' => $horarios,
         ]);
     }
 
-    /**
-     * 5. UPDATE: Actualiza el calendario existente.
-     */
     public function update(Request $request, Calendario $calendario)
     {
-        // Validación
         $validated = $request->validate([
             'id_servicio' => 'required|exists:servicio,id',
             'id_tutor' => 'required|exists:tutor,id',
-            'costo_base' => 'required|numeric|min:0',
-            'cupos_MAX' => 'required|integer|min:1',
-            'horarios' => 'required|array|min:1',
-            'horarios.*' => 'exists:horario,id',
+            'tipo_programacion' => 'required|in:CITA_LIBRE,PAQUETE_FIJO',
+            'numero_sesiones' => 'nullable|integer|min:1|required_if:tipo_programacion,PAQUETE_FIJO',
+            'duracion_sesion_minutos' => 'required|integer|min:15',
+            'costo_total' => 'required|numeric|min:0',
+            'cupos_maximos' => 'required|integer|min:1',
+            'disponibilidades' => 'required|array|min:1',
+            'disponibilidades.*.dia_semana' => 'required|in:LUNES,MARTES,MIERCOLES,JUEVES,VIERNES,SABADO,DOMINGO',
+            'disponibilidades.*.hora_apertura' => 'required|date_format:H:i',
+            'disponibilidades.*.hora_cierre' => 'required|date_format:H:i|after:disponibilidades.*.hora_apertura',
         ]);
 
-        // Validar que no haya conflicto de horarios
-        if (!$this->validarHorariosDisponibles($validated['id_tutor'], $validated['horarios'], $calendario->id)) {
+        if ($this->tieneCruceDisponibilidadTutor($validated['id_tutor'], $validated['disponibilidades'], $calendario->id)) {
             return Redirect::back()
-                ->with('error', 'El tutor tiene conflicto de horarios. Selecciona horarios sin conflicto.');
+                ->withErrors(['disponibilidades' => 'El tutor tiene conflicto de disponibilidad en uno o más rangos.'])
+                ->withInput();
         }
 
-        // Actualizar datos
-        $calendario->update([
-            'id_servicio' => $validated['id_servicio'],
-            'id_tutor' => $validated['id_tutor'],
-            'costo_base' => $validated['costo_base'],
-            'cupos_MAX' => $validated['cupos_MAX'],
-        ]);
+        DB::transaction(function () use ($validated, $calendario) {
+            $isPaquete = $validated['tipo_programacion'] === 'PAQUETE_FIJO';
 
-        // Actualizar horarios (sincronizar)
-        $calendario->horarios()->sync($validated['horarios']);
+            $calendario->update([
+                'id_servicio' => $validated['id_servicio'],
+                'id_tutor' => $validated['id_tutor'],
+                'tipo_programacion' => $validated['tipo_programacion'],
+                'numero_sesiones' => $isPaquete ? $validated['numero_sesiones'] : null,
+                'duracion_sesion_minutos' => $validated['duracion_sesion_minutos'],
+                'costo_total' => $validated['costo_total'],
+                'cupos_maximos' => $validated['cupos_maximos'],
+            ]);
+
+            $calendario->disponibilidades()->delete();
+            $rows = collect($validated['disponibilidades'])
+                ->map(fn ($item) => [
+                    'id_calendario' => $calendario->id,
+                    'dia_semana' => $item['dia_semana'],
+                    'hora_apertura' => $item['hora_apertura'],
+                    'hora_cierre' => $item['hora_cierre'],
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ])->all();
+
+            Disponibilidad::insert($rows);
+        });
 
         return Redirect::route('calendarios.index')->with('success', 'Calendario actualizado correctamente.');
     }
 
-    /**
-     * 6. DESTROY: Elimina el calendario.
-     */
     public function destroy(Calendario $calendario)
     {
-        // Validar si tiene inscripciones activas
         if ($calendario->inscripciones()->exists()) {
             return Redirect::back()
                 ->with('error', 'No puedes eliminar un calendario con inscripciones activas.');
@@ -178,36 +190,37 @@ class CalendarioController extends Controller
         return Redirect::route('calendarios.index')->with('success', 'Calendario eliminado correctamente.');
     }
 
-    /**
-     * Validar que los horarios no choquen con otros calendarios del mismo tutor.
-     */
-    private function validarHorariosDisponibles($id_tutor, $horarios, $calendario_id = null)
+    private function tieneCruceDisponibilidadTutor(int $idTutor, array $nuevasDisponibilidades, ?int $calendarioId = null): bool
     {
-        // Obtener los horarios del tutor en otros calendarios
-        $query = Calendario::where('id_tutor', $id_tutor);
+        $query = Calendario::where('id_tutor', $idTutor)->with('disponibilidades');
 
-        // Excluir el calendario actual si estamos editando
-        if ($calendario_id) {
-            $query->where('id', '!=', $calendario_id);
+        if ($calendarioId) {
+            $query->where('id', '!=', $calendarioId);
         }
 
-        $otros_calendarios = $query->with('horarios')->get();
+        $otrosCalendarios = $query->get();
 
-        // Obtener los horarios que el tutor ya tiene
-        $horarios_ocupados = [];
-        foreach ($otros_calendarios as $cal) {
-            foreach ($cal->horarios as $horario) {
-                $horarios_ocupados[] = $horario->id;
+        foreach ($nuevasDisponibilidades as $nueva) {
+            $nuevoInicio = $nueva['hora_apertura'];
+            $nuevoFin = $nueva['hora_cierre'];
+            $nuevoDia = $nueva['dia_semana'];
+
+            foreach ($otrosCalendarios as $calendario) {
+                foreach ($calendario->disponibilidades as $existente) {
+                    if ($existente->dia_semana !== $nuevoDia) {
+                        continue;
+                    }
+
+                    $existeCruce = $nuevoInicio < $existente->hora_cierre
+                        && $nuevoFin > $existente->hora_apertura;
+
+                    if ($existeCruce) {
+                        return true;
+                    }
+                }
             }
         }
 
-        // Verificar que ninguno de los nuevos horarios esté ocupado
-        foreach ($horarios as $horario_id) {
-            if (in_array($horario_id, $horarios_ocupados)) {
-                return false;
-            }
-        }
-
-        return true;
+        return false;
     }
 }

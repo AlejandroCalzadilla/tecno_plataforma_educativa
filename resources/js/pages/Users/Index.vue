@@ -57,8 +57,7 @@ interface Pagination<T> {
 }
 
 // Recibimos los usuarios desde el controlador
-defineProps<{
-
+const props=defineProps<{
     usuarios: Pagination<User>;
 
 }>();
@@ -97,6 +96,7 @@ const confirm = (message: string) => {
     }
 };
 
+ console.log('Props recibidas:', props.usuarios);
 </script>
 
 <template>

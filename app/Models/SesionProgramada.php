@@ -5,10 +5,17 @@ use Illuminate\Database\Eloquent\Model;
 
 class SesionProgramada extends Model
 {
-    protected $table = 'sesiones_programadas';
+    protected $table = 'sesion_programada';
     protected $primaryKey = 'id';
     protected $fillable = [
-        'id_inscripcion', 'fecha_sesion', 'fecha_hora_inicio', 'fecha_hora_fin', 'estado_asistencia', 'observaciones'
+        'id_inscripcion',
+        'fecha_sesion',
+        'fecha_hora_inicio',
+        'fecha_hora_fin',
+        'link_sesion',
+        'estado_asistencia',
+        'numero_sesion',
+        'observaciones',
     ];
 
     public function inscripcion()

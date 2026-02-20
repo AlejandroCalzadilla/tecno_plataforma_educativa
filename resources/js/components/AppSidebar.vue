@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Link } from '@inertiajs/vue3';
+import { Link, usePage } from '@inertiajs/vue3';
 import { BookOpen, Folder, Home, LayoutGrid, Users,CreditCard, School, CalendarRange, UserSearch, ListTodo, Banknote } from 'lucide-vue-next';
 import NavFooter from '@/components/NavFooter.vue';
 import NavMain from '@/components/NavMain.vue';
@@ -18,8 +18,11 @@ import { type NavItem } from '@/types';
 import AppLogo from './AppLogo.vue';
 import { dashboard } from '@/routes';
 import { route } from 'ziggy-js';
+import { computed } from 'vue';
 
-const mainNavItems: NavItem[] = [
+const page = usePage();
+const userRoles = computed(() => page.props.auth.user.roles);
+const allNavItems: (NavItem & { role?: string[] })[] = [
     {
         title: 'Dashboard',
         href: dashboard(),
@@ -29,55 +32,88 @@ const mainNavItems: NavItem[] = [
     {   title: 'Usuarios',
         href: route('users.index'),
         icon: Users,
+        role: ['propietario'], // Solo admin
     },
     {    
          title: 'Servicios',
         href: route('servicios.index'),
         icon: School,
+        role: [ 'tutor','propietario'], // Admin y tutor
     },
     {
         title: 'Pagos',
         href: dashboard(),
         icon: CreditCard,
+        role: ['alumno','propietario'], // Solo alumno
+
     },
     {
         title: 'Oferta Academica',
         href:route('calendarios.index'),
         icon: CalendarRange,
+        role: ['propietario'], // Solo alumno
     },
     {
         title: 'Reportes',
         href: dashboard(),
         icon: CalendarRange,
+        role: ['propietario'], // Solo admin
     },
     {
         title: 'Catalogo',
-        href: dashboard(),
+        href: route('catalogo.index'),
         icon: UserSearch,
+        role: ['alumno'], // Solo admin
     },
     {
         title: 'Mis Inscripciones',
         href: dashboard(),
         icon: ListTodo,
+        role: ['alumno'], // Solo alumno
     },
     {
         title: 'Ventas',
         href: dashboard(),
         icon: Banknote,
+        role: ['propietario'], // Solo admin
     },
     {
         title: 'Asistencia',
         href: dashboard(),
         icon: ListTodo,
-    },{
+        role: ['tutor'], // Solo tutor
+    },
+     {
+        title: 'Licencias',
+        href: route('licencias.index'),
+        icon: ListTodo,
+        role: ['tutor'], // Solo tutor
+
+     },
+     {
+        title: 'Informes de clase',
+        href: route('informes-clase.index'),
+        icon: ListTodo,
+        role: ['tutor'], // Solo tutor
+     },
+    {
         title: 'Categorias',
         href: route('categorias.index'),
         icon: ListTodo,
+        role: ['propietario'], // Solo admin
     }
 
 
 ];
+const filteredNavItems = computed(() => {
+    return allNavItems.filter(item => {
+        // Si no tiene la propiedad 'role', es público (como el Dashboard)
+        if (!item.role) return true;
 
+        // Verificamos si el usuario tiene alguno de los roles permitidos para este item
+        return item.role.some(r => userRoles.value![r as keyof typeof userRoles.value]);
+    });
+});
 
 const footerNavItems: NavItem[] = [
     {
@@ -108,7 +144,7 @@ const footerNavItems: NavItem[] = [
         </SidebarHeader>
 
         <SidebarContent>
-            <NavMain :items="mainNavItems" />
+            <NavMain :items="filteredNavItems" />
         </SidebarContent>
 
         <SidebarFooter>

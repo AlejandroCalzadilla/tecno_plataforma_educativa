@@ -17,14 +17,10 @@ class Calendario extends Model
         'duracion_sesion_minutos',
         'costo_total',
         'cupos_maximos',
-        'fecha_inicio_paquete',
-        'fecha_fin_paquete',
     ];
 
     protected $casts = [
         'costo_total' => 'decimal:2',
-        'fecha_inicio_paquete' => 'date',
-        'fecha_fin_paquete' => 'date',
     ];
 
     public function servicio(): BelongsTo

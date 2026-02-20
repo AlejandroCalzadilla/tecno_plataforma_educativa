@@ -16,11 +16,9 @@ const selectedCategoria = ref('');
 const formData = ref({
     nombre: '',
     id_categoria: '',
-    costo_base: '',
     modalidad: 'VIRTUAL',
     descripcion: '',
-    duracion_semanas: '',
-    duracion_horas: '',
+  
 });
 
 interface Servicio {
@@ -79,11 +77,8 @@ const openCreateModal = () => {
     formData.value = {
         nombre: '',
         id_categoria: '',
-        costo_base: '',
         modalidad: 'VIRTUAL',
         descripcion: '',
-        duracion_semanas: '',
-        duracion_horas: '',
     };
     isFormModalOpen.value = true;
 };
@@ -94,11 +89,10 @@ const openEditModal = (servicio: Servicio) => {
     formData.value = {
         nombre: servicio.nombre,
         id_categoria: servicio.id_categoria.toString(),
-        costo_base: servicio.costo_base.toString(),
+        
         modalidad: servicio.modalidad,
         descripcion: servicio.descripcion,
-        duracion_semanas: servicio.duracion_semanas?.toString() || '',
-        duracion_horas: servicio.duracion_horas?.toString() || '',
+       
     };
     selectedServicio.value = servicio;
     isFormModalOpen.value = true;
@@ -215,7 +209,6 @@ const getCategoriaNombre = (id: number) => {
                             <tr>
                                 <th class="px-6 py-4 font-bold">Nombre</th>
                                 <th class="px-6 py-4 font-bold">Categoría</th>
-                                <th class="px-6 py-4 font-bold">Costo Base</th>
                                 <th class="px-6 py-4 font-bold">Modalidad</th>
                                 <th class="px-6 py-4 font-bold">Estado</th>
                                 <th class="px-6 py-4 text-right font-bold">Acciones</th>
@@ -235,10 +228,10 @@ const getCategoriaNombre = (id: number) => {
                                 <td class="px-6 py-4">
                                     {{ getCategoriaNombre(servicio.id_categoria) }}
                                 </td>
-                                <td class="px-6 py-4">
+                               <!--  <td class="px-6 py-4">
                                     ${{ servicio.costo_base }}
-                                </td>
-                                <td class="px-6 py-4">
+                                </td> -->
+                               <td class="px-6 py-4">
                                     <span :class="[
                                         'text-sm rounded px-2 py-1',
                                         servicio.modalidad === 'VIRTUAL' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400' :
@@ -247,7 +240,7 @@ const getCategoriaNombre = (id: number) => {
                                     ]">
                                         {{ servicio.modalidad }}
                                     </span>
-                                </td>
+                                </td> 
                                 <td class="px-6 py-4">
                                     <span v-if="servicio.estado_activo === true"
                                         class="text-sm bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400 rounded px-2 py-1">Activo</span>
@@ -304,10 +297,10 @@ const getCategoriaNombre = (id: number) => {
                             <span class="text-xs uppercase font-bold text-muted-foreground">Nombre:</span>
                             <p class="font-medium text-foreground">{{ selectedServicio?.nombre }}</p>
                         </div>
-                        <div>
+                       <!--  <div>
                             <span class="text-xs uppercase font-bold text-muted-foreground">Costo Base:</span>
                             <p class="font-medium text-foreground">${{ selectedServicio?.costo_base }}</p>
-                        </div>
+                        </div> -->
                         <div>
                             <span class="text-xs uppercase font-bold text-muted-foreground">Modalidad:</span>
                             <p class="font-medium text-foreground">{{ selectedServicio?.modalidad }}</p>
@@ -323,7 +316,7 @@ const getCategoriaNombre = (id: number) => {
                         <p class="font-medium text-foreground">{{ selectedServicio?.descripcion }}</p>
                     </div>
 
-                    <div class="grid grid-cols-2 gap-4" v-if="selectedServicio?.duracion_semanas || selectedServicio?.duracion_horas">
+                    <!-- <div class="grid grid-cols-2 gap-4" v-if="selectedServicio?.duracion_semanas || selectedServicio?.duracion_horas">
                         <div v-if="selectedServicio?.duracion_semanas">
                             <span class="text-xs uppercase font-bold text-muted-foreground">Duración (Semanas):</span>
                             <p class="font-medium text-foreground">{{ selectedServicio?.duracion_semanas }}</p>
@@ -332,7 +325,7 @@ const getCategoriaNombre = (id: number) => {
                             <span class="text-xs uppercase font-bold text-muted-foreground">Duración (Horas):</span>
                             <p class="font-medium text-foreground">{{ selectedServicio?.duracion_horas }}</p>
                         </div>
-                    </div>
+                    </div> -->
 
                     <div class="pt-4 border-t border-border">
                         <p class="text-xs text-muted-foreground italic">ID: {{ selectedServicio?.id }}</p>
@@ -381,14 +374,14 @@ const getCategoriaNombre = (id: number) => {
                             </select>
                         </div>
 
-                        <div>
+                      <!--   <div>
                             <label class="block text-sm font-medium text-foreground mb-2">
                                 Costo Base *
                             </label>
                             <input v-model="formData.costo_base" type="number" placeholder="0.00" step="0.01" min="0"
                                 class="w-full px-4 py-2 border border-border rounded-lg bg-card text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary"
                                 required />
-                        </div>
+                        </div> -->
 
                         <div>
                             <label class="block text-sm font-medium text-foreground mb-2">
@@ -411,24 +404,6 @@ const getCategoriaNombre = (id: number) => {
                                 class="w-full px-4 py-2 border border-border rounded-lg bg-card text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary"
                                 rows="3"></textarea>
                         </div>
-
-                        <div class="grid grid-cols-2 gap-4">
-                            <div>
-                                <label class="block text-sm font-medium text-foreground mb-2">
-                                    Duración (Semanas)
-                                </label>
-                                <input v-model="formData.duracion_semanas" type="number" placeholder="0" min="0"
-                                    class="w-full px-4 py-2 border border-border rounded-lg bg-card text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary" />
-                            </div>
-                            <div>
-                                <label class="block text-sm font-medium text-foreground mb-2">
-                                    Duración (Horas)
-                                </label>
-                                <input v-model="formData.duracion_horas" type="number" placeholder="0" min="0"
-                                    class="w-full px-4 py-2 border border-border rounded-lg bg-card text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary" />
-                            </div>
-                        </div>
-
                         <div class="flex gap-2 justify-end pt-4">
                             <button type="button" @click="closeFormModal"
                                 class="px-4 py-2 cursor-pointer bg-secondary text-secondary-foreground rounded-lg text-sm font-bold hover:opacity-80 transition">

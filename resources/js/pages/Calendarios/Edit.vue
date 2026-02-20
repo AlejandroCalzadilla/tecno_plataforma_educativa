@@ -26,31 +26,49 @@ interface Tutor {
     };
 }
 
+interface Disponibilidad {
+    id: number;
+    dia_semana: string;
+    hora_apertura: string;
+    hora_cierre: string;
+}
+
+interface Calendario {
+    id: number;
+    id_servicio: number;
+    id_tutor: number;
+    tipo_programacion: TipoProgramacion;
+    numero_sesiones: number | null;
+    duracion_sesion_minutos: number;
+    costo_total: number;
+    cupos_maximos: number;
+    disponibilidades: Disponibilidad[];
+}
+
 const props = defineProps<{
+    calendario: Calendario;
     servicios: Servicio[];
     tutores: Tutor[];
 }>();
 
 const breadcrumbItems: BreadcrumbItem[] = [
     { title: 'Calendarios', href: '/calendarios' },
-    { title: 'Crear', href: '/calendarios/create' },
+    { title: 'Editar', href: `/calendarios/${props.calendario.id}/edit` },
 ];
 
 const form = useForm({
-    id_servicio: '',
-    id_tutor: '',
-    tipo_programacion: 'CITA_LIBRE' as TipoProgramacion,
-    numero_sesiones: '' as string | number,
-    duracion_sesion_minutos: 60,
-    costo_total: '' as string | number,
-    cupos_maximos: 1,
-    disponibilidades: [
-        {
-            dia_semana: 'LUNES',
-            hora_apertura: '08:00',
-            hora_cierre: '10:00',
-        },
-    ] as DisponibilidadForm[],
+    id_servicio: String(props.calendario.id_servicio),
+    id_tutor: String(props.calendario.id_tutor),
+    tipo_programacion: props.calendario.tipo_programacion,
+    numero_sesiones: props.calendario.numero_sesiones ?? '',
+    duracion_sesion_minutos: props.calendario.duracion_sesion_minutos,
+    costo_total: props.calendario.costo_total,
+    cupos_maximos: props.calendario.cupos_maximos,
+    disponibilidades: props.calendario.disponibilidades.map((d) => ({
+        dia_semana: d.dia_semana,
+        hora_apertura: d.hora_apertura.substring(0, 5),
+        hora_cierre: d.hora_cierre.substring(0, 5),
+    })) as DisponibilidadForm[],
 });
 
 const diasSemana = ['LUNES', 'MARTES', 'MIERCOLES', 'JUEVES', 'VIERNES', 'SABADO', 'DOMINGO'];
@@ -72,7 +90,7 @@ const removeDisponibilidad = (index: number) => {
 };
 
 const submit = () => {
-    form.post(route('calendarios.store'));
+    form.put(route('calendarios.update', props.calendario.id));
 };
 
 const tutorLabel = (tutor: Tutor) => tutor.usuario?.name ?? `Tutor ${tutor.id}`;
@@ -80,10 +98,10 @@ const tutorLabel = (tutor: Tutor) => tutor.usuario?.name ?? `Tutor ${tutor.id}`;
 
 <template>
     <AppLayout :breadcrumbs="breadcrumbItems">
-        <Head title="Crear calendario" />
+        <Head title="Editar calendario" />
         <UserLayout>
             <div class="max-w-4xl mx-auto bg-card border border-border rounded-xl p-6 space-y-6">
-                <h1 class="text-xl font-bold text-foreground">Crear calendario</h1>
+                <h1 class="text-xl font-bold text-foreground">Editar calendario</h1>
 
                 <form class="space-y-6" @submit.prevent="submit">
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -142,7 +160,6 @@ const tutorLabel = (tutor: Tutor) => tutor.usuario?.name ?? `Tutor ${tutor.id}`;
                             <input v-model="form.numero_sesiones" type="number" min="1" class="w-full px-3 py-2 border border-border rounded-lg bg-card" />
                             <p v-if="form.errors.numero_sesiones" class="text-sm text-red-600 mt-1">{{ form.errors.numero_sesiones }}</p>
                         </div>
-                       
                     </div>
 
                     <div class="space-y-3">
@@ -169,7 +186,7 @@ const tutorLabel = (tutor: Tutor) => tutor.usuario?.name ?? `Tutor ${tutor.id}`;
                     <div class="flex justify-end gap-2">
                         <Link :href="route('calendarios.index')" class="px-4 py-2 bg-secondary text-secondary-foreground rounded-lg">Cancelar</Link>
                         <button type="submit" class="px-4 py-2 bg-primary text-primary-foreground rounded-lg" :disabled="form.processing">
-                            Guardar calendario
+                            Guardar cambios
                         </button>
                     </div>
                 </form>

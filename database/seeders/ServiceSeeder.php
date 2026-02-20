@@ -28,12 +28,10 @@ class ServiceSeeder extends Seeder
                 'id_categoria' => $categoria->id,
                 'nombre' => "Servicio de Tutoría en {$categoria->nombre}",
                 'descripcion' => "Tutoría personalizada para estudiantes de {$categoria->nombre}.",
-                'costo_base' => random_int(100, 500), // Costo aleatorio entre 100 y 500
+                //'costo_base' => random_int(100, 500), // Costo aleatorio entre 100 y 500
                 'modalidad' => ['VIRTUAL', 'PRESENCIAL', 'HIBRIDO'][array_rand(['VIRTUAL', 'PRESENCIAL', 'HIBRIDO'])], // Modalidad aleatoria
                 'estado_activo' => true,
-                'duracion_semanas' => random_int(4, 12), // Duración aleatoria entre 4 y 12 semanas
-                'duracion_horas' => random_int(1, 3) * 4, // Duración aleatoria en horas (4, 8 o 12 horas)
-            ]);
+                  ]);
         }
        
     
