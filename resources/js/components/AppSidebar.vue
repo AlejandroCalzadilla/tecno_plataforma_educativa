@@ -38,11 +38,11 @@ const allNavItems: (NavItem & { role?: string[] })[] = [
          title: 'Servicios',
         href: route('servicios.index'),
         icon: School,
-        role: [ 'tutor','propietario'], // Admin y tutor
+        role: [ 'propietario'], // Admin y tutor
     },
     {
         title: 'Pagos',
-        href: dashboard(),
+        href: route('pagos.index'),
         icon: CreditCard,
         role: ['alumno','propietario'], // Solo alumno
 

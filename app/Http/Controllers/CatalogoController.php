@@ -12,6 +12,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Redirect;
 use Inertia\Inertia;
+use Laravel\Pail\ValueObjects\Origin\Console;
 
 class CatalogoController extends Controller
 {
@@ -121,6 +122,9 @@ class CatalogoController extends Controller
 
     public function pago(Request $request, Calendario $calendario)
     {
+
+        //dd($request->all(), "que llega al controlador");
+
         $validated = $request->validate([
             'id_alumno' => 'nullable|integer|exists:alumno,id',
             'fecha_inicio' => 'nullable|date',
@@ -128,6 +132,7 @@ class CatalogoController extends Controller
             'cantidad_cuotas' => 'nullable|integer|min:2|max:24',
             'metodo_pago' => 'nullable|in:EFECTIVO,QR,TRANSFERENCIA,TARJETA',
         ]);
+        //dd($validated, "que llega al controlador");
 
         $calendario->load(['servicio', 'tutor.usuario:id,name', 'disponibilidades']);
 
@@ -157,24 +162,37 @@ class CatalogoController extends Controller
 
     public function confirmarPago(Request $request, Calendario $calendario)
     {
+
+        //dd($request, "datos recibidos para confirmar pago");
         $validated = $request->validate([
-            'id_alumno' => 'required|integer|exists:alumno,id',
+            'id_alumno' => 'required|integer',
             'fecha_inicio' => 'required|date',
             'tipo_pago_pref' => 'required|in:CONTADO,CUOTAS',
-            'cantidad_cuotas' => 'nullable|integer|min:2|max:24|required_if:tipo_pago_pref,CUOTAS',
+
+            // 👇 Usamos exclude_if para que si es CONTADO, no importe qué valor venga
+            'cantidad_cuotas' => [
+                'exclude_if:tipo_pago_pref,CONTADO',
+                'required_if:tipo_pago_pref,CUOTAS',
+                'integer',
+                'min:2',
+                'max:24'
+            ],
+
             'metodo_pago' => 'required|in:EFECTIVO,QR,TRANSFERENCIA,TARJETA',
         ]);
+        //dd($validated, "datos recibidos para confirmar pago despues de validación");
 
         $calendario->load('disponibilidades');
         $fechaInicio = Carbon::parse($validated['fecha_inicio'])->startOfDay();
         $sesionesProgramadas = $this->generarSesionesProgramadasPreview($calendario, $fechaInicio);
 
         if (count($sesionesProgramadas) === 0) {
+            dd('no se pudieron generar sesiones para este calendario. Revisa su disponibilidad.', "error en generación de sesiones");
             return Redirect::back()->withErrors([
                 'pago' => 'No se pudo generar sesiones para este calendario. Revisa su disponibilidad.',
             ]);
         }
-
+        //dd('llega al trabajo');
         $inscripcion = DB::transaction(function () use ($validated, $calendario, $sesionesProgramadas) {
             $inscripcion = Inscripcion::create([
                 'id_alumno' => $validated['id_alumno'],
@@ -202,14 +220,14 @@ class CatalogoController extends Controller
             return $inscripcion;
         });
 
-        return Redirect::route('catalogo.servicio.show', $calendario->id_servicio)
+        return Redirect::route('catalogo.index')
             ->with('success', 'Pago simulado correctamente. Inscripción #' . $inscripcion->id . ' guardada con sus sesiones programadas.');
     }
 
     private function generarSesionesProgramadasPreview(Calendario $calendario, CarbonInterface $fechaInicio): array
     {
         $disponibilidades = $calendario->disponibilidades
-            ->sortBy(fn ($item) => $this->ordenDia($item->dia_semana) * 10000 + (int) str_replace(':', '', substr($item->hora_apertura, 0, 5)))
+            ->sortBy(fn($item) => $this->ordenDia($item->dia_semana) * 10000 + (int) str_replace(':', '', substr($item->hora_apertura, 0, 5)))
             ->values();
 
         if ($disponibilidades->isEmpty()) {
@@ -287,11 +305,13 @@ class CatalogoController extends Controller
     private function generarCuotasPreview(float $montoTotal, int $cantidadCuotas, CarbonInterface $fechaBase): array
     {
         if ($cantidadCuotas <= 1) {
-            return [[
-                'numero_cuota' => 1,
-                'monto_cuota' => number_format($montoTotal, 2, '.', ''),
-                'fecha_vencimiento' => $fechaBase->toDateString(),
-            ]];
+            return [
+                [
+                    'numero_cuota' => 1,
+                    'monto_cuota' => number_format($montoTotal, 2, '.', ''),
+                    'fecha_vencimiento' => $fechaBase->toDateString(),
+                ]
+            ];
         }
 
         $montoCuota = round($montoTotal / $cantidadCuotas, 2);

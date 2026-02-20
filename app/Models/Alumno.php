@@ -20,4 +20,9 @@ class Alumno extends Model
     {
         return $this->hasMany(Inscripcion::class, 'id_alumno', 'id');
     }
+
+    public function pagos()
+    {
+        return $this->hasMany(Pago::class, 'id_alumno', 'id');
+    }
 }
