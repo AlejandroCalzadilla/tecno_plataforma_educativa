@@ -13,18 +13,19 @@ return new class extends Migration {
         // 7. Calendario
         Schema::create('calendario', function (Blueprint $table) {
             $table->id();
+
             $table->foreignId('id_servicio')->constrained('servicio');
             $table->foreignId('id_tutor')->constrained('tutor');
-            // Diferenciador clave
             $table->enum('tipo_programacion', ['CITA_LIBRE', 'PAQUETE_FIJO']);
-            $table->integer('numero_sesiones')->nullable(); // Solo para PAQUETE_FIJO
+            $table->integer('numero_sesiones')->nullable(); // Solo para paquetes
             $table->unsignedInteger('duracion_sesion_minutos');
             $table->decimal('costo_total', 10, 2);
-            $table->integer('cupos_maximos')->default(1); // Para cursos grupales
+            $table->unsignedInteger('cupos_maximos')->default(1);
+
             $table->timestamps();
         });
 
-       
+
         //disponibilidad  
         Schema::create('disponibilidad', function (Blueprint $table) {
             $table->id();
@@ -43,9 +44,9 @@ return new class extends Migration {
      */
     public function down(): void
     {
-        
+
         Schema::dropIfExists('disponibilidad');
-       
+
         Schema::dropIfExists('calendario');
     }
 };

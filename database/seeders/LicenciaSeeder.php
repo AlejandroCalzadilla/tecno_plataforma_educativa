@@ -2,8 +2,8 @@
 
 namespace Database\Seeders;
 
+use App\Models\Asistencia;
 use App\Models\Licencia;
-use App\Models\SesionProgramada;
 use Illuminate\Database\Seeder;
 
 class LicenciaSeeder extends Seeder
@@ -13,10 +13,10 @@ class LicenciaSeeder extends Seeder
      */
     public function run(): void
     {
-        $sesiones = SesionProgramada::all();
+        $asistencias = Asistencia::all();
 
-        if ($sesiones->isEmpty()) {
-            $this->command->info('No hay sesiones programadas disponibles. Por favor, ejecuta primero el seeder de sesiones programadas.');
+        if ($asistencias->isEmpty()) {
+            $this->command->info('No hay asistencias disponibles. Por favor, ejecuta primero el seeder de asistencias.');
             return;
         }
 
@@ -31,12 +31,12 @@ class LicenciaSeeder extends Seeder
 
         $estadosAprobacion = ['PENDIENTE', 'APROBADA', 'RECHAZADA'];
 
-        // Crear licencias para aproximadamente el 20% de las sesiones
-        $sesionesConLicencia = $sesiones->random((int)($sesiones->count() * 0.2));
+        $cantidad = max(1, (int) floor($asistencias->count() * 0.2));
+        $asistenciasConLicencia = $asistencias->random(min($cantidad, $asistencias->count()));
 
-        foreach ($sesionesConLicencia as $sesion) {
+        foreach ($asistenciasConLicencia as $asistencia) {
             Licencia::create([
-                'id_asistencia' => $sesion->id,
+                'id_asistencia' => $asistencia->id,
                 'fecha_solicitud' => now()->subDays(rand(1, 7)),
                 'motivo' => $motivos[array_rand($motivos)],
                 'evidencia_url' => rand(0, 1) ? 'https://example.com/evidencia/' . rand(1000, 9999) . '.pdf' : null,

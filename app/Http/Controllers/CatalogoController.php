@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Calendario;
 use App\Models\Inscripcion;
+use App\Models\Asistencia;
 use App\Models\SesionProgramada;
 use App\Models\Servicio;
 use Carbon\Carbon;
@@ -12,7 +13,6 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Redirect;
 use Inertia\Inertia;
-use Laravel\Pail\ValueObjects\Origin\Console;
 
 class CatalogoController extends Controller
 {
@@ -165,7 +165,7 @@ class CatalogoController extends Controller
 
         //dd($request, "datos recibidos para confirmar pago");
         $validated = $request->validate([
-            'id_alumno' => 'required|integer',
+            'id_alumno' => 'required|integer|exists:alumno,id',
             'fecha_inicio' => 'required|date',
             'tipo_pago_pref' => 'required|in:CONTADO,CUOTAS',
 
@@ -186,10 +186,9 @@ class CatalogoController extends Controller
         $fechaInicio = Carbon::parse($validated['fecha_inicio'])->startOfDay();
         $sesionesProgramadas = $this->generarSesionesProgramadasPreview($calendario, $fechaInicio);
 
-        if (count($sesionesProgramadas) === 0) {
-            dd('no se pudieron generar sesiones para este calendario. Revisa su disponibilidad.', "error en generación de sesiones");
+        if ($calendario->tipo_programacion === 'CITA_LIBRE' && count($sesionesProgramadas) === 0) {
             return Redirect::back()->withErrors([
-                'pago' => 'No se pudo generar sesiones para este calendario. Revisa su disponibilidad.',
+                'pago' => 'No se pudo generar la sesión para este calendario. Revisa su disponibilidad.',
             ]);
         }
         //dd('llega al trabajo');
@@ -201,21 +200,46 @@ class CatalogoController extends Controller
                 'estado_academico' => 'CURSANDO',
             ]);
 
-            $rows = collect($sesionesProgramadas)->map(function ($sesion) use ($inscripcion) {
-                return [
+            if ($calendario->tipo_programacion === 'PAQUETE_FIJO') {
+                $sesionIds = SesionProgramada::query()
+                    ->where('id_calendario', $calendario->id)
+                    ->pluck('id');
+
+                if ($sesionIds->isEmpty()) {
+                    throw new \RuntimeException('El calendario de tipo PAQUETE_FIJO no tiene sesiones programadas.');
+                }
+
+                $asistencias = $sesionIds->map(fn ($sesionId) => [
+                    'id_sesion' => $sesionId,
                     'id_inscripcion' => $inscripcion->id,
-                    'fecha_sesion' => $sesion['fecha_sesion'],
-                    'fecha_hora_inicio' => $sesion['fecha_hora_inicio'],
-                    'fecha_hora_fin' => $sesion['fecha_hora_fin'],
                     'estado_asistencia' => 'PENDIENTE',
-                    'numero_sesion' => $sesion['numero_sesion'],
                     'observaciones' => null,
                     'created_at' => now(),
                     'updated_at' => now(),
-                ];
-            })->all();
+                ])->all();
 
-            SesionProgramada::insert($rows);
+                Asistencia::insert($asistencias);
+            }
+
+            if ($calendario->tipo_programacion === 'CITA_LIBRE') {
+                $primeraSesion = $sesionesProgramadas[0];
+
+                $sesion = SesionProgramada::create([
+                    'id_calendario' => $calendario->id,
+                    'fecha_sesion' => $primeraSesion['fecha_sesion'],
+                    'hora_inicio' => $primeraSesion['fecha_hora_inicio'],
+                    'hora_fin' => $primeraSesion['fecha_hora_fin'],
+                    'link_sesion' => null,
+                    'numero_sesion' => null,
+                ]);
+
+                Asistencia::create([
+                    'id_sesion' => $sesion->id,
+                    'id_inscripcion' => $inscripcion->id,
+                    'estado_asistencia' => 'PENDIENTE',
+                    'observaciones' => null,
+                ]);
+            }
 
             return $inscripcion;
         });

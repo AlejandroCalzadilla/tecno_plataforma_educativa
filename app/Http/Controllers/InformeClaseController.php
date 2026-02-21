@@ -2,8 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Asistencia;
 use App\Models\InformeClase;
-use App\Models\SesionProgramada;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Redirect;
 use Inertia\Inertia;
@@ -32,20 +32,24 @@ class InformeClaseController extends Controller
 
     public function create()
     {
-        $sesiones = SesionProgramada::with('inscripcion.alumno.usuario')
+        $sesiones = Asistencia::with('sesion', 'inscripcion.alumno.usuario')
             ->whereDoesntHave('informe')
-            ->orderByDesc('fecha_sesion')
+            ->orderByDesc('created_at')
             ->get();
 
         return Inertia::render('InformesClase/Create', [
-            'sesiones' => $sesiones,
+            'sesiones' => $sesiones->map(fn($asistencia) => [
+                'id' => $asistencia->id,
+                'fecha_sesion' => $asistencia->sesion?->fecha_sesion,
+                'numero_sesion' => $asistencia->sesion?->numero_sesion,
+            ])->values(),
         ]);
     }
 
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'id_asistencia' => 'required|exists:sesion_programada,id|unique:informeclase,id_asistencia',
+            'id_asistencia' => 'required|exists:asistencia,id|unique:informeclase,id_asistencia',
             'temas_vistos' => 'nullable|string',
             'tareas_asignadas' => 'nullable|string',
             'desempenio' => 'nullable|in:BAJO,MEDIO,ALTO,EXCELENTE',
@@ -58,24 +62,28 @@ class InformeClaseController extends Controller
 
     public function edit(InformeClase $informes_clase)
     {
-        $sesiones = SesionProgramada::with('inscripcion.alumno.usuario')
+        $sesiones = Asistencia::with('sesion', 'inscripcion.alumno.usuario')
             ->where(function ($query) use ($informes_clase) {
                 $query->whereDoesntHave('informe')
                     ->orWhere('id', $informes_clase->id_asistencia);
             })
-            ->orderByDesc('fecha_sesion')
+            ->orderByDesc('created_at')
             ->get();
 
         return Inertia::render('InformesClase/Edit', [
             'informe' => $informes_clase,
-            'sesiones' => $sesiones,
+            'sesiones' => $sesiones->map(fn($asistencia) => [
+                'id' => $asistencia->id,
+                'fecha_sesion' => $asistencia->sesion?->fecha_sesion,
+                'numero_sesion' => $asistencia->sesion?->numero_sesion,
+            ])->values(),
         ]);
     }
 
     public function update(Request $request, InformeClase $informes_clase)
     {
         $validated = $request->validate([
-            'id_asistencia' => 'required|exists:sesion_programada,id|unique:informeclase,id_asistencia,' . $informes_clase->id_informe . ',id_informe',
+            'id_asistencia' => 'required|exists:asistencia,id|unique:informeclase,id_asistencia,' . $informes_clase->id_informe . ',id_informe',
             'temas_vistos' => 'nullable|string',
             'tareas_asignadas' => 'nullable|string',
             'desempenio' => 'nullable|in:BAJO,MEDIO,ALTO,EXCELENTE',

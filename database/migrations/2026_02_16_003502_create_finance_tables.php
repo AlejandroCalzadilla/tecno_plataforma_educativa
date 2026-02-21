@@ -4,8 +4,7 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-return new class extends Migration
-{
+return new class extends Migration {
     /**
      * Run the migrations.
      */
@@ -14,17 +13,21 @@ return new class extends Migration
         // 10. Inscripcion
         Schema::create('inscripcion', function (Blueprint $table) {
             $table->id();
-            $table->unsignedBigInteger('id_alumno');
-            $table->unsignedBigInteger('id_calendario');
+            $table->foreignId('id_alumno')->constrained('alumno');
+            $table->foreignId('id_calendario')->constrained('calendario');
             $table->dateTime('fecha_inscripcion')->useCurrent();
-            $table->enum('estado_academico', ['CURSANDO', 'FINALIZADO', 'ABANDONADO', 'PENDIENTE_PAGO'])->default('PENDIENTE_PAGO');
+            $table->enum('estado_academico', [
+                'CURSANDO',
+                'FINALIZADO',
+                'ABANDONADO',
+                'PENDIENTE_PAGO'
+            ])->default('PENDIENTE_PAGO');
             $table->decimal('calificacion_final', 4, 2)->nullable();
             $table->timestamps();
-            $table->foreign('id_alumno')->references('id')->on('alumno');
-            $table->foreign('id_calendario')->references('id')->on('calendario');
+            $table->unique(['id_alumno', 'id_calendario']); // evita doble inscripción
         });
 
-         
+
 
 
         // 11. Venta

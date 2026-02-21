@@ -2,8 +2,8 @@
 
 namespace Database\Seeders;
 
+use App\Models\Asistencia;
 use App\Models\InformeClase;
-use App\Models\SesionProgramada;
 use Illuminate\Database\Seeder;
 
 class InformeClaseSeeder extends Seeder
@@ -13,10 +13,10 @@ class InformeClaseSeeder extends Seeder
      */
     public function run(): void
     {
-        $sesiones = SesionProgramada::all();
+        $asistencias = Asistencia::all();
 
-        if ($sesiones->isEmpty()) {
-            $this->command->info('No hay sesiones programadas disponibles. Por favor, ejecuta primero el seeder de sesiones programadas.');
+        if ($asistencias->isEmpty()) {
+            $this->command->info('No hay asistencias disponibles. Por favor, ejecuta primero el seeder de asistencias.');
             return;
         }
 
@@ -42,16 +42,20 @@ class InformeClaseSeeder extends Seeder
             'Hacer resumen del tema',
         ];
 
-        // Crear informes para aproximadamente el 70% de las sesiones completadas
-        $sesionesCompletadas = $sesiones->filter(function($sesion) {
-            return in_array($sesion->estado_asistencia, ['PRESENTE', 'TARDANZA', 'JUSTIFICADO']);
+        $asistenciasCompletadas = $asistencias->filter(function ($asistencia) {
+            return in_array($asistencia->estado_asistencia, ['PRESENTE', 'TARDANZA', 'JUSTIFICADO']);
         });
 
-        $sesionesConInforme = $sesionesCompletadas->random((int)($sesionesCompletadas->count() * 0.7));
+        if ($asistenciasCompletadas->isEmpty()) {
+            return;
+        }
 
-        foreach ($sesionesConInforme as $sesion) {
+        $cantidad = max(1, (int) floor($asistenciasCompletadas->count() * 0.7));
+        $asistenciasConInforme = $asistenciasCompletadas->random(min($cantidad, $asistenciasCompletadas->count()));
+
+        foreach ($asistenciasConInforme as $asistencia) {
             InformeClase::create([
-                'id_asistencia' => $sesion->id,
+                'id_asistencia' => $asistencia->id,
                 'temas_vistos' => collect($temas)->random(rand(1, 3))->implode(', '),
                 'tareas_asignadas' => rand(0, 1) ? collect($tareas)->random(rand(1, 2))->implode('; ') : null,
                 'desempenio' => rand(0, 1) ? $desempenios[array_rand($desempenios)] : null,

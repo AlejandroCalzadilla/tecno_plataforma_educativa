@@ -6,8 +6,8 @@ use App\Http\Controllers\CalendarioController;
 use App\Http\Controllers\CatalogoController;
 use App\Http\Controllers\InformeClaseController;
 use App\Http\Controllers\LicenciaController;
-use App\Http\Controllers\HorarioController;
 use App\Http\Controllers\PagoController;
+use App\Http\Controllers\SesionProgramadaController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 use Laravel\Fortify\Features;
@@ -24,7 +24,7 @@ Route::get('dashboard', function () {
   if (auth()->user()->is_alumno) {
         return redirect()->route('catalogo.index');
     } elseif (auth()->user()->is_tutor) {
-        return redirect()->route('catalogo.index');
+        return redirect()->route('informes-clase.index');
     } elseif (auth()->user()->is_propietario) {
         return Inertia::render('Dashboard');
     }
@@ -40,11 +40,14 @@ Route::resource('servicios', ServicioController::class);
 Route::resource('calendarios', CalendarioController::class);
 Route::resource('licencias', LicenciaController::class);
 Route::resource('informes-clase', InformeClaseController::class);
-Route::post('horarios', [HorarioController::class, 'store'])->name('horarios.store');
+
 
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('pagos', [PagoController::class, 'index'])->name('pagos.index');
     Route::post('pagos/cuotas/{cuota}/pagar', [PagoController::class, 'pagarCuota'])->name('pagos.pagar-cuota');
+    
+    Route::get('sesiones', [SesionProgramadaController::class, 'index'])->name('sesiones.index');
+    Route::get('sesiones/{sesion}', [SesionProgramadaController::class, 'show'])->name('sesiones.show');
 });
 
 Route::prefix('catalogo')->name('catalogo.')->group(function () {

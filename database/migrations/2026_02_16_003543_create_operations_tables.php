@@ -4,36 +4,59 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-return new class extends Migration
-{
+return new class extends Migration {
     /**
      * Run the migrations.
      */
     public function up(): void
     {
-        // 14. Asistencia
-      /*   Schema::create('asistencia', function (Blueprint $table) {
-            $table->id();
-            $table->unsignedBigInteger('id_inscripcion');
-            $table->date('fecha');
-            $table->enum('estado_asistencia', ['PRESENTE', 'AUSENTE', 'TARDANZA', 'JUSTIFICADO']);
-            $table->text('observaciones')->nullable();
-            $table->timestamps();
-            $table->foreign('id_inscripcion')->references('id')->on('inscripcion');
-        }); */
 
-        Schema::create('sesion_programada', function (Blueprint $table) {
+
+
+         Schema::create('sesion_programada', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('id_inscripcion')->constrained('inscripcion')->onDelete('cascade');
+
+            $table->foreignId('id_calendario')
+                ->constrained('calendario')
+                ->onDelete('cascade');
+
             $table->date('fecha_sesion');
-            $table->time('fecha_hora_inicio');
-            $table->time('fecha_hora_fin');
-            $table->text('link_sesion')->nullable(); // Para sesiones virtuales
-            $table->enum('estado_asistencia', ['PENDIENTE','PRESENTE', 'AUSENTE', 'TARDANZA', 'JUSTIFICADO']);
-            $table->integer('numero_sesion'); // Ej: Sesión 1 de 4
-             $table->text('observaciones')->nullable();
+            $table->time('hora_inicio');
+            $table->time('hora_fin');
+
+            $table->text('link_sesion')->nullable();
+
+            $table->integer('numero_sesion')->nullable();
+            // Para paquetes: 1,2,3...
+            // Para clase privada puede ser null
+
             $table->timestamps();
         });
+        // 14. Asistencia
+        Schema::create('asistencia', function (Blueprint $table) {
+            $table->id();
+
+            $table->foreignId('id_sesion')
+                ->constrained('sesion_programada')
+                ->onDelete('cascade');
+
+            $table->foreignId('id_inscripcion')
+                ->constrained('inscripcion')
+                ->onDelete('cascade');
+            $table->enum('estado_asistencia', [
+                'PENDIENTE',
+                'PRESENTE',
+                'AUSENTE',
+                'TARDANZA',
+                'JUSTIFICADO'
+            ])->default('PENDIENTE');
+            $table->text('observaciones')->nullable();
+            $table->timestamps();
+            $table->unique(['id_sesion', 'id_inscripcion']);
+            // evita duplicados
+        });
+
+        
 
         // 15. Licencia
         Schema::create('licencia', function (Blueprint $table) {
@@ -46,7 +69,7 @@ return new class extends Migration
             $table->text('observacion_admin')->nullable();
             $table->timestamps();
 
-            $table->foreign('id_asistencia')->references('id')->on('sesion_programada');
+            $table->foreign('id_asistencia')->references('id')->on('asistencia');
         });
 
         // 16. InformeClase
@@ -58,7 +81,7 @@ return new class extends Migration
             $table->enum('desempenio', ['BAJO', 'MEDIO', 'ALTO', 'EXCELENTE'])->nullable();
             $table->timestamps();
 
-            $table->foreign('id_asistencia')->references('id')->on('sesion_programada');
+            $table->foreign('id_asistencia')->references('id')->on('asistencia');
         });
     }
 
@@ -70,5 +93,6 @@ return new class extends Migration
         Schema::dropIfExists('informeclase');
         Schema::dropIfExists('licencia');
         Schema::dropIfExists('asistencia');
+        Schema::dropIfExists('sesion_programada');
     }
 };

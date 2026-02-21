@@ -13,6 +13,7 @@ class Calendario extends Model
         'id_servicio',
         'id_tutor',
         'tipo_programacion',
+        'fecha_inicio',
         'numero_sesiones',
         'duracion_sesion_minutos',
         'costo_total',
@@ -21,6 +22,7 @@ class Calendario extends Model
 
     protected $casts = [
         'costo_total' => 'decimal:2',
+        'fecha_inicio' => 'date:Y-m-d',
     ];
 
     public function servicio(): BelongsTo
@@ -42,5 +44,10 @@ class Calendario extends Model
     public function disponibilidades(): HasMany
     {
         return $this->hasMany(Disponibilidad::class, 'id_calendario');
+    }
+
+    public function sesionesProgramadas(): HasMany
+    {
+        return $this->hasMany(SesionProgramada::class, 'id_calendario');
     }
 }

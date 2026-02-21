@@ -8,28 +8,21 @@ class SesionProgramada extends Model
     protected $table = 'sesion_programada';
     protected $primaryKey = 'id';
     protected $fillable = [
-        'id_inscripcion',
+        'id_calendario',
         'fecha_sesion',
-        'fecha_hora_inicio',
-        'fecha_hora_fin',
+        'hora_inicio',
+        'hora_fin',
         'link_sesion',
-        'estado_asistencia',
         'numero_sesion',
-        'observaciones',
     ];
 
-    public function inscripcion()
+    public function calendario()
     {
-        return $this->belongsTo(Inscripcion::class, 'id_inscripcion','id');
+        return $this->belongsTo(Calendario::class, 'id_calendario', 'id');
     }
 
-    public function licencia()
+    public function asistencias()
     {
-        return $this->hasOne(Licencia::class, 'id_asistencia');
-    }
-
-    public function informe()
-    {
-        return $this->hasOne(InformeClase::class, 'id_asistencia');
+        return $this->hasMany(Asistencia::class, 'id_sesion', 'id');
     }
 }

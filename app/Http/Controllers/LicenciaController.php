@@ -2,8 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Asistencia;
 use App\Models\Licencia;
-use App\Models\SesionProgramada;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Redirect;
 use Inertia\Inertia;
@@ -32,20 +32,24 @@ class LicenciaController extends Controller
 
     public function create()
     {
-        $sesiones = SesionProgramada::with('inscripcion.alumno.usuario')
+        $sesiones = Asistencia::with('sesion', 'inscripcion.alumno.usuario')
             ->whereDoesntHave('licencia')
-            ->orderByDesc('fecha_sesion')
+            ->orderByDesc('created_at')
             ->get();
 
         return Inertia::render('Licencias/Create', [
-            'sesiones' => $sesiones,
+            'sesiones' => $sesiones->map(fn($asistencia) => [
+                'id' => $asistencia->id,
+                'fecha_sesion' => $asistencia->sesion?->fecha_sesion,
+                'numero_sesion' => $asistencia->sesion?->numero_sesion,
+            ])->values(),
         ]);
     }
 
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'id_asistencia' => 'required|exists:sesion_programada,id|unique:licencia,id_asistencia',
+            'id_asistencia' => 'required|exists:asistencia,id|unique:licencia,id_asistencia',
             'motivo' => 'required|string',
             'evidencia_url' => 'nullable|string|max:255',
             'estado_aprobacion' => 'required|in:PENDIENTE,APROBADA,RECHAZADA',
@@ -59,24 +63,28 @@ class LicenciaController extends Controller
 
     public function edit(Licencia $licencia)
     {
-        $sesiones = SesionProgramada::with('inscripcion.alumno.usuario')
+        $sesiones = Asistencia::with('sesion', 'inscripcion.alumno.usuario')
             ->where(function ($query) use ($licencia) {
                 $query->whereDoesntHave('licencia')
                     ->orWhere('id', $licencia->id_asistencia);
             })
-            ->orderByDesc('fecha_sesion')
+            ->orderByDesc('created_at')
             ->get();
 
         return Inertia::render('Licencias/Edit', [
             'licencia' => $licencia,
-            'sesiones' => $sesiones,
+            'sesiones' => $sesiones->map(fn($asistencia) => [
+                'id' => $asistencia->id,
+                'fecha_sesion' => $asistencia->sesion?->fecha_sesion,
+                'numero_sesion' => $asistencia->sesion?->numero_sesion,
+            ])->values(),
         ]);
     }
 
     public function update(Request $request, Licencia $licencia)
     {
         $validated = $request->validate([
-            'id_asistencia' => 'required|exists:sesion_programada,id|unique:licencia,id_asistencia,' . $licencia->id_licencia . ',id_licencia',
+            'id_asistencia' => 'required|exists:asistencia,id|unique:licencia,id_asistencia,' . $licencia->id_licencia . ',id_licencia',
             'motivo' => 'required|string',
             'evidencia_url' => 'nullable|string|max:255',
             'estado_aprobacion' => 'required|in:PENDIENTE,APROBADA,RECHAZADA',

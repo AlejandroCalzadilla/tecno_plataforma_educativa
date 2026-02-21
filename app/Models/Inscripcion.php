@@ -33,9 +33,9 @@ class Inscripcion extends Model
         return $this->hasOne(Venta::class, 'id_inscripcion', 'id');
     }
 
-    public function sesionesProgramadas()
+    public function asistencias()
     {
-        return $this->hasMany(SesionProgramada::class, 'id_inscripcion', 'id');
+        return $this->hasMany(Asistencia::class, 'id_inscripcion', 'id');
     }
 
     public function calendario()

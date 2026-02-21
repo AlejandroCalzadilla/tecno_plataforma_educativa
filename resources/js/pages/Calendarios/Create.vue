@@ -40,6 +40,7 @@ const form = useForm({
     id_servicio: '',
     id_tutor: '',
     tipo_programacion: 'CITA_LIBRE' as TipoProgramacion,
+    fecha_inicio: '',
     numero_sesiones: '' as string | number,
     duracion_sesion_minutos: 60,
     costo_total: '' as string | number,
@@ -137,6 +138,11 @@ const tutorLabel = (tutor: Tutor) => tutor.usuario?.name ?? `Tutor ${tutor.id}`;
                     </div>
 
                     <div v-if="form.tipo_programacion === 'PAQUETE_FIJO'" class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div>
+                            <label class="block text-sm mb-1">Fecha de inicio del curso</label>
+                            <input v-model="form.fecha_inicio" type="date" class="w-full px-3 py-2 border border-border rounded-lg bg-card" />
+                            <p v-if="form.errors.fecha_inicio" class="text-sm text-red-600 mt-1">{{ form.errors.fecha_inicio }}</p>
+                        </div>
                         <div>
                             <label class="block text-sm mb-1">Número de sesiones</label>
                             <input v-model="form.numero_sesiones" type="number" min="1" class="w-full px-3 py-2 border border-border rounded-lg bg-card" />

@@ -102,7 +102,9 @@ const irAPago = () => {
             <div class="space-y-5">
                 <div class="bg-card border border-border rounded-xl p-5">
                     <h1 class="text-xl font-bold text-foreground">Preinscripción (sin guardar)</h1>
-                    <p class="text-sm text-muted-foreground mt-1">Se genera la inscripción y sesiones programadas en memoria para enviar luego a pasarela de pago.</p>
+                    <p class="text-sm text-muted-foreground mt-1">
+                        Vista previa de la inscripción. Para paquetes se usarán sesiones ya existentes; para cita libre se creará una nueva sesión.
+                    </p>
                 </div>
 
                 <div class="bg-card border border-border rounded-xl p-5 grid grid-cols-1 md:grid-cols-3 gap-3">

@@ -95,7 +95,7 @@ const confirmarPago = () => {
                 <div class="bg-card border border-border rounded-xl p-5">
                     <h1 class="text-xl font-bold text-foreground">Pago simulado</h1>
                     <p class="text-sm text-muted-foreground mt-1">
-                        Al confirmar, se guarda la inscripción y las sesiones programadas.
+                        Al confirmar: en paquete fijo se crean asistencias sobre sesiones existentes; en cita libre se crea una sesión y su asistencia.
                     </p>
                 </div>
 
@@ -176,7 +176,7 @@ const confirmarPago = () => {
                 </div>
 
                 <div class="bg-card border border-border rounded-xl p-5">
-                    <h2 class="font-semibold mb-3">Sesiones a guardar</h2>
+                    <h2 class="font-semibold mb-3">Sesiones previstas</h2>
                     <table class="w-full text-sm">
                         <thead>
                             <tr class="border-b border-border text-left">

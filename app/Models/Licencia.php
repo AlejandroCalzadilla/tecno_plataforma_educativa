@@ -14,6 +14,6 @@ class Licencia extends Model
 
     public function asistencia()
     {
-        return $this->belongsTo(SesionProgramada::class, 'id_asistencia', 'id');
+        return $this->belongsTo(Asistencia::class, 'id_asistencia', 'id');
     }
 }

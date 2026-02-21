@@ -42,6 +42,7 @@ class CalendarioSeeder extends Seeder
                     'id_servicio' => $servicio->id,
                     'id_tutor' => $tutor->id,
                     'tipo_programacion' => $tipo,
+                    'fecha_inicio' => $tipo === 'PAQUETE_FIJO' ? now()->addDays(rand(1, 21))->toDateString() : null,
                     'numero_sesiones' => $tipo === 'PAQUETE_FIJO' ? rand(4, 12) : null,
                     'duracion_sesion_minutos' => $duraciones[array_rand($duraciones)],
                     'costo_total' => rand(500, 2000),
