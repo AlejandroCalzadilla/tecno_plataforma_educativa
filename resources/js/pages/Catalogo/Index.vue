@@ -59,6 +59,7 @@ const modalidadLabel = (value: Servicio['modalidad']) => {
     if (value === 'PRESENCIAL') return 'Físico';
     return 'Híbrido';
 };
+console.log('Servicios recibidos en el catálogo:', props.servicios);
 </script>
 
 <template>

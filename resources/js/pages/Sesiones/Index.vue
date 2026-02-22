@@ -104,6 +104,8 @@ const selectDay = (day: CalendarDay): void => {
 const viewSession = (id: number): void => {
     router.get(route('sesiones.show', id));
 };
+
+console.log('Sesiones recibidas para el calendario:', props.sessions);
 </script>
 
 <template>

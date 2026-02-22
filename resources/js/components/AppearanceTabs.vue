@@ -8,12 +8,14 @@ const tabs = [
     { value: 'light', Icon: Sun, label: 'Light' },
     { value: 'dark', Icon: Moon, label: 'Dark' },
     { value: 'system', Icon: Monitor, label: 'System' },
+    
 ] as const;
 
 const colorThemes = [
     { value: 'blue', label: 'Azul', color: 'bg-blue-500' },
     { value: 'green', label: 'Verde', color: 'bg-green-500' },
     { value: 'purple', label: 'Morado', color: 'bg-purple-500' },
+    { value: 'kids', label: 'Kids', color: 'bg-pink-500' },
 ] as const;
 </script>
 

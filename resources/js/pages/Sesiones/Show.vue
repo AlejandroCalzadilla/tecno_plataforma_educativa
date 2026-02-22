@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue';
-import { Head, Link, usePage } from '@inertiajs/vue3';
+import { Head, Link, router, usePage } from '@inertiajs/vue3';
 import AppLayout from '@/layouts/AppLayout.vue';
 import {
     Calendar,
@@ -54,6 +54,16 @@ interface SessionDetail {
         id: number;
         user: UserData;
     };
+    asistencias?: {
+        id: number;
+        estado_asistencia: 'PENDIENTE' | 'PRESENTE' | 'AUSENTE' | 'TARDANZA' | 'JUSTIFICADO';
+        observaciones?: string;
+        alumno: {
+            id: number;
+            user: UserData;
+        };
+    }[];
+    es_tutor?: boolean;
     informes?: Informe[];
 }
 
@@ -67,7 +77,6 @@ const page = usePage();
 // 3. Computed Properties con lógica de Roles
 const canEditSession = computed(() => {
     const user = page.props.auth.user;
-    console.log('Session', props.session);
     return user?.roles?.tutor && props.session.tutor.user.id === user?.id; // id_actor sería el ID en la tabla tutor
 });
 
@@ -109,7 +118,16 @@ const cancelSession = () => {
     }
 };
 
-console.log('Detalles de la sesión:', page.props.auth);
+const estadosAsistencia = ['PENDIENTE', 'PRESENTE', 'AUSENTE', 'TARDANZA', 'JUSTIFICADO'] as const;
+
+const actualizarAsistencia = (asistenciaId: number, estadoAsistencia: string, observaciones?: string) => {
+    router.patch(route('sesiones.asistencias.update', [props.session.id, asistenciaId]), {
+        estado_asistencia: estadoAsistencia,
+        observaciones: observaciones ?? null,
+    }, {
+        preserveScroll: true,
+    });
+};
 </script>
 
 <template>
@@ -252,6 +270,7 @@ console.log('Detalles de la sesión:', page.props.auth);
                                         Cancelar Sesión
                                     </button>
                                 </div>
+
                             </div>
                         </div>
 
@@ -307,6 +326,49 @@ console.log('Detalles de la sesión:', page.props.auth);
                                         </div>
 
 
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div v-if="canEditSession && session.asistencias?.length" class="mt-12 pt-12 border-t border-border">
+                            <div class="flex items-center gap-2 mb-8">
+                                <CheckCircle2 class="w-6 h-6 text-primary" />
+                                <h3 class="text-xl font-bold text-foreground">Control de Asistencia</h3>
+                            </div>
+
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div
+                                    v-for="asistencia in session.asistencias"
+                                    :key="asistencia.id"
+                                    class="p-6 bg-card border border-border rounded-2xl shadow-sm"
+                                >
+                                    <p class="text-base font-bold text-foreground mb-4">{{ asistencia.alumno.user.name }}</p>
+
+                                    <div class="space-y-3">
+                                        <div>
+                                            <label class="block text-xs font-bold text-muted-foreground uppercase mb-2">Estado</label>
+                                            <select
+                                                :value="asistencia.estado_asistencia"
+                                                class="w-full px-3 py-2 border border-border rounded-lg bg-card"
+                                                @change="(event) => actualizarAsistencia(asistencia.id, (event.target as HTMLSelectElement).value, asistencia.observaciones)"
+                                            >
+                                                <option v-for="estado in estadosAsistencia" :key="estado" :value="estado">
+                                                    {{ estado }}
+                                                </option>
+                                            </select>
+                                        </div>
+
+                                        <div>
+                                            <label class="block text-xs font-bold text-muted-foreground uppercase mb-2">Observaciones</label>
+                                            <textarea
+                                                :value="asistencia.observaciones ?? ''"
+                                                class="w-full px-3 py-2 border border-border rounded-lg bg-card"
+                                                rows="3"
+                                                placeholder="Registrar observaciones"
+                                                @change="(event) => actualizarAsistencia(asistencia.id, asistencia.estado_asistencia, (event.target as HTMLTextAreaElement).value)"
+                                            />
+                                        </div>
                                     </div>
                                 </div>
                             </div>

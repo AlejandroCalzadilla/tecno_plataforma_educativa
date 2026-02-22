@@ -38,7 +38,7 @@ return new class extends Migration
         });
 
         // 6. Servicio_Tutor (Tabla Pivote)
-        Schema::create('servicio_tutor', function (Blueprint $table) {
+        /* Schema::create('servicio_tutor', function (Blueprint $table) {
             $table->unsignedBigInteger('id_servicio');
             $table->unsignedBigInteger('id_tutor');
             
@@ -47,7 +47,7 @@ return new class extends Migration
 
             $table->foreign('id_servicio')->references('id')->on('servicio')->onDelete('cascade');
             $table->foreign('id_tutor')->references('id')->on('tutor')->onDelete('cascade');
-        });
+        }); */
     }
 
     /**
@@ -55,7 +55,7 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('servicio_tutor');
+        //Schema::dropIfExists('servicio_tutor');
         Schema::dropIfExists('servicio');
         Schema::dropIfExists('categorianivel');
     }

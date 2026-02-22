@@ -66,12 +66,12 @@ const allNavItems: (NavItem & { role?: string[] })[] = [
         icon: UserSearch,
         role: ['alumno'], // Solo admin
     },
-    {
+    /* {
         title: 'Mis Inscripciones',
         href: dashboard(),
         icon: ListTodo,
         role: ['alumno'], // Solo alumno
-    },
+    }, */
     {
         title: 'Mis Sesiones',
         href: route('sesiones.index'),

@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Asistencia;
 use App\Models\SesionProgramada;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Redirect;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -104,6 +105,7 @@ class SesionProgramadaController extends Controller
             'link_virtual' => $sesion->link_sesion,
             'status' => $asistenciaUsuario?->estado_asistencia ?? 'PENDIENTE',
             'notas' => $asistenciaUsuario?->observaciones,
+            'mi_asistencia_id' => $asistenciaUsuario?->id,
             'numero_sesion' => $sesion->numero_sesion,
             'servicio' => [
                 'id' => $sesion->calendario->servicio->id,
@@ -129,11 +131,50 @@ class SesionProgramadaController extends Controller
                     'email' => $asistenciaUsuario?->inscripcion?->alumno?->usuario?->email,
                 ]
             ],
+            'asistencias' => $sesion->asistencias->map(fn ($asistencia) => [
+                'id' => $asistencia->id,
+                'estado_asistencia' => $asistencia->estado_asistencia,
+                'observaciones' => $asistencia->observaciones,
+                'alumno' => [
+                    'id' => $asistencia->inscripcion?->alumno?->id,
+                    'user' => [
+                        'id' => $asistencia->inscripcion?->alumno?->usuario?->id,
+                        'name' => $asistencia->inscripcion?->alumno?->usuario?->name,
+                        'email' => $asistencia->inscripcion?->alumno?->usuario?->email,
+                    ],
+                ],
+            ])->values(),
+            'es_tutor' => (bool) $user?->is_tutor,
             'informes' => $asistenciaUsuario?->informe ? [$asistenciaUsuario->informe] : []
         ];
 
         return Inertia::render('Sesiones/Show', [
             'session' => $sessionData,
         ]);
+    }
+
+    public function updateAsistencia(Request $request, SesionProgramada $sesion, Asistencia $asistencia)
+    {
+        $user = $request->user();
+
+        if (!$user?->is_tutor || (int) $sesion->calendario?->id_tutor !== (int) $user->tutor?->id) {
+            abort(403, 'No tienes permiso para registrar asistencia en esta sesión.');
+        }
+
+        if ((int) $asistencia->id_sesion !== (int) $sesion->id) {
+            abort(422, 'La asistencia no pertenece a la sesión seleccionada.');
+        }
+
+        $validated = $request->validate([
+            'estado_asistencia' => 'required|in:PENDIENTE,PRESENTE,AUSENTE,TARDANZA,JUSTIFICADO',
+            'observaciones' => 'nullable|string|max:1000',
+        ]);
+
+        $asistencia->update([
+            'estado_asistencia' => $validated['estado_asistencia'],
+            'observaciones' => $validated['observaciones'] ?? null,
+        ]);
+
+        return Redirect::back()->with('success', 'Asistencia actualizada correctamente.');
     }
 }

@@ -51,6 +51,8 @@ class CatalogoController extends Controller
 
     public function show(Request $request, Servicio $servicio)
     {
+
+        //dd($servicio->id, "servicio recibido en el controlador show");
         $calendariosQuery = Calendario::query()
             ->where('id_servicio', $servicio->id)
             ->with(['tutor.usuario:id,name', 'disponibilidades'])
@@ -92,9 +94,26 @@ class CatalogoController extends Controller
 
         $calendario->load(['servicio', 'tutor.usuario:id,name', 'disponibilidades']);
 
+        [$fechaMinimaCita, $fechaMaximaCita] = $this->rangoCitaLibrePermitido();
+        $fechasDisponiblesCitaLibre = $calendario->tipo_programacion === 'CITA_LIBRE'
+            ? $this->obtenerFechasDisponiblesCitaLibre($calendario, $fechaMinimaCita, $fechaMaximaCita)
+            : [];
+
         $fechaInicio = isset($validated['fecha_inicio'])
             ? Carbon::parse($validated['fecha_inicio'])->startOfDay()
             : now()->startOfDay();
+
+        if ($calendario->tipo_programacion === 'CITA_LIBRE') {
+            if (isset($validated['fecha_inicio']) && !in_array($fechaInicio->toDateString(), $fechasDisponiblesCitaLibre, true)) {
+                return Redirect::back()->withErrors([
+                    'fecha_inicio' => 'La fecha seleccionada no está disponible para este calendario.',
+                ]);
+            }
+
+            if (!isset($validated['fecha_inicio']) && !empty($fechasDisponiblesCitaLibre)) {
+                $fechaInicio = Carbon::parse($fechasDisponiblesCitaLibre[0])->startOfDay();
+            }
+        }
 
         $sesionesProgramadas = $this->generarSesionesProgramadasPreview($calendario, $fechaInicio);
 
@@ -113,6 +132,11 @@ class CatalogoController extends Controller
             'calendario' => $calendario,
             'inscripcionPreview' => $inscripcionPreview,
             'sesionesProgramadas' => $sesionesProgramadas,
+            'fechasDisponiblesCitaLibre' => $fechasDisponiblesCitaLibre,
+            'rangoCitaLibre' => [
+                'inicio' => $fechaMinimaCita->toDateString(),
+                'fin' => $fechaMaximaCita->toDateString(),
+            ],
             'params' => [
                 'id_alumno' => $validated['id_alumno'] ?? '',
                 'fecha_inicio' => $fechaInicio->toDateString(),
@@ -136,9 +160,23 @@ class CatalogoController extends Controller
 
         $calendario->load(['servicio', 'tutor.usuario:id,name', 'disponibilidades']);
 
+        [$fechaMinimaCita, $fechaMaximaCita] = $this->rangoCitaLibrePermitido();
+        $fechasDisponiblesCitaLibre = $calendario->tipo_programacion === 'CITA_LIBRE'
+            ? $this->obtenerFechasDisponiblesCitaLibre($calendario, $fechaMinimaCita, $fechaMaximaCita)
+            : [];
+
         $fechaInicio = isset($validated['fecha_inicio'])
             ? Carbon::parse($validated['fecha_inicio'])->startOfDay()
             : now()->startOfDay();
+
+        if ($calendario->tipo_programacion === 'CITA_LIBRE') {
+            if (!in_array($fechaInicio->toDateString(), $fechasDisponiblesCitaLibre, true)) {
+                return Redirect::route('catalogo.inscripcion.preview', $calendario)
+                    ->withErrors([
+                        'fecha_inicio' => 'La fecha seleccionada ya no está disponible. Elige otra fecha libre.',
+                    ]);
+            }
+        }
 
         $sesionesProgramadas = $this->generarSesionesProgramadasPreview($calendario, $fechaInicio);
         $tipoPago = $validated['tipo_pago_pref'] ?? 'CONTADO';
@@ -184,6 +222,18 @@ class CatalogoController extends Controller
 
         $calendario->load('disponibilidades');
         $fechaInicio = Carbon::parse($validated['fecha_inicio'])->startOfDay();
+
+        if ($calendario->tipo_programacion === 'CITA_LIBRE') {
+            [$fechaMinimaCita, $fechaMaximaCita] = $this->rangoCitaLibrePermitido();
+            $fechasDisponiblesCitaLibre = $this->obtenerFechasDisponiblesCitaLibre($calendario, $fechaMinimaCita, $fechaMaximaCita);
+
+            if (!in_array($fechaInicio->toDateString(), $fechasDisponiblesCitaLibre, true)) {
+                return Redirect::back()->withErrors([
+                    'pago' => 'La fecha seleccionada ya no está disponible para esta cita libre.',
+                ]);
+            }
+        }
+
         $sesionesProgramadas = $this->generarSesionesProgramadasPreview($calendario, $fechaInicio);
 
         if ($calendario->tipo_programacion === 'CITA_LIBRE' && count($sesionesProgramadas) === 0) {
@@ -192,60 +242,132 @@ class CatalogoController extends Controller
             ]);
         }
         //dd('llega al trabajo');
-        $inscripcion = DB::transaction(function () use ($validated, $calendario, $sesionesProgramadas) {
-            $inscripcion = Inscripcion::create([
-                'id_alumno' => $validated['id_alumno'],
-                'id_calendario' => $calendario->id,
-                'fecha_inscripcion' => now(),
-                'estado_academico' => 'CURSANDO',
-            ]);
+        try {
+            $inscripcion = DB::transaction(function () use ($validated, $calendario, $sesionesProgramadas, $fechaInicio) {
+                $inscripcion = Inscripcion::create([
+                    'id_alumno' => $validated['id_alumno'],
+                    'id_calendario' => $calendario->id,
+                    'fecha_inscripcion' => now(),
+                    'estado_academico' => 'CURSANDO',
+                ]);
 
-            if ($calendario->tipo_programacion === 'PAQUETE_FIJO') {
-                $sesionIds = SesionProgramada::query()
-                    ->where('id_calendario', $calendario->id)
-                    ->pluck('id');
+                if ($calendario->tipo_programacion === 'PAQUETE_FIJO') {
+                    $sesionIds = SesionProgramada::query()
+                        ->where('id_calendario', $calendario->id)
+                        ->pluck('id');
 
-                if ($sesionIds->isEmpty()) {
-                    throw new \RuntimeException('El calendario de tipo PAQUETE_FIJO no tiene sesiones programadas.');
+                    if ($sesionIds->isEmpty()) {
+                        throw new \RuntimeException('El calendario de tipo PAQUETE_FIJO no tiene sesiones programadas.');
+                    }
+
+                    $asistencias = $sesionIds->map(fn($sesionId) => [
+                        'id_sesion' => $sesionId,
+                        'id_inscripcion' => $inscripcion->id,
+                        'estado_asistencia' => 'PENDIENTE',
+                        'observaciones' => null,
+                        'created_at' => now(),
+                        'updated_at' => now(),
+                    ])->all();
+
+                    Asistencia::insert($asistencias);
                 }
 
-                $asistencias = $sesionIds->map(fn ($sesionId) => [
-                    'id_sesion' => $sesionId,
-                    'id_inscripcion' => $inscripcion->id,
-                    'estado_asistencia' => 'PENDIENTE',
-                    'observaciones' => null,
-                    'created_at' => now(),
-                    'updated_at' => now(),
-                ])->all();
+                if ($calendario->tipo_programacion === 'CITA_LIBRE') {
+                    Calendario::query()
+                        ->whereKey($calendario->id)
+                        ->lockForUpdate()
+                        ->first();
 
-                Asistencia::insert($asistencias);
-            }
+                    $yaOcupada = Asistencia::query()
+                        ->join('sesion_programada', 'sesion_programada.id', '=', 'asistencia.id_sesion')
+                        ->where('sesion_programada.id_calendario', $calendario->id)
+                        ->whereDate('sesion_programada.fecha_sesion', $fechaInicio->toDateString())
+                        ->exists();
 
-            if ($calendario->tipo_programacion === 'CITA_LIBRE') {
-                $primeraSesion = $sesionesProgramadas[0];
+                    if ($yaOcupada) {
+                        throw new \RuntimeException('La fecha seleccionada fue ocupada por otra inscripción.');
+                    }
 
-                $sesion = SesionProgramada::create([
-                    'id_calendario' => $calendario->id,
-                    'fecha_sesion' => $primeraSesion['fecha_sesion'],
-                    'hora_inicio' => $primeraSesion['fecha_hora_inicio'],
-                    'hora_fin' => $primeraSesion['fecha_hora_fin'],
-                    'link_sesion' => null,
-                    'numero_sesion' => null,
-                ]);
+                    $primeraSesion = $sesionesProgramadas[0];
 
-                Asistencia::create([
-                    'id_sesion' => $sesion->id,
-                    'id_inscripcion' => $inscripcion->id,
-                    'estado_asistencia' => 'PENDIENTE',
-                    'observaciones' => null,
-                ]);
-            }
+                    $sesion = SesionProgramada::create([
+                        'id_calendario' => $calendario->id,
+                        'fecha_sesion' => $primeraSesion['fecha_sesion'],
+                        'hora_inicio' => $primeraSesion['fecha_hora_inicio'],
+                        'hora_fin' => $primeraSesion['fecha_hora_fin'],
+                        'link_sesion' => null,
+                        'numero_sesion' => null,
+                    ]);
 
-            return $inscripcion;
-        });
+                    Asistencia::create([
+                        'id_sesion' => $sesion->id,
+                        'id_inscripcion' => $inscripcion->id,
+                        'estado_asistencia' => 'PENDIENTE',
+                        'observaciones' => null,
+                    ]);
+                }
+
+                return $inscripcion;
+            });
+        } catch (\RuntimeException $exception) {
+            return Redirect::back()->withErrors([
+                'pago' => $exception->getMessage(),
+            ]);
+        }
 
         return Redirect::route('catalogo.index')
             ->with('success', 'Pago simulado correctamente. Inscripción #' . $inscripcion->id . ' guardada con sus sesiones programadas.');
+    }
+
+    private function rangoCitaLibrePermitido(): array
+    {
+        $inicio = now()->startOfDay();
+        $fin = $inicio->copy()->addDays(30);
+
+        return [$inicio, $fin];
+    }
+
+    private function obtenerFechasDisponiblesCitaLibre(Calendario $calendario, CarbonInterface $fechaInicio, CarbonInterface $fechaFin): array
+    {
+        $diasDisponibles = $calendario->disponibilidades
+            ->pluck('dia_semana')
+            ->filter()
+            ->unique()
+            ->values();
+
+        if ($diasDisponibles->isEmpty()) {
+            return [];
+        }
+
+        $fechasOcupadas = Asistencia::query()
+            ->join('sesion_programada', 'sesion_programada.id', '=', 'asistencia.id_sesion')
+            ->where('sesion_programada.id_calendario', $calendario->id)
+            ->whereBetween('sesion_programada.fecha_sesion', [
+                $fechaInicio->toDateString(),
+                $fechaFin->toDateString(),
+            ])
+            ->pluck('sesion_programada.fecha_sesion')
+            ->map(fn ($fecha) => Carbon::parse($fecha)->toDateString())
+            ->unique()
+            ->values()
+            ->all();
+
+        $fechasLibres = [];
+        $cursor = Carbon::parse($fechaInicio->toDateString())->startOfDay();
+        $ultimoDia = Carbon::parse($fechaFin->toDateString())->startOfDay();
+
+        while ($cursor->lessThanOrEqualTo($ultimoDia)) {
+            $fechaActual = $cursor->toDateString();
+            $diaActual = $this->nombreDiaPorNumero($cursor->dayOfWeekIso);
+
+            if ($diasDisponibles->contains($diaActual) && !in_array($fechaActual, $fechasOcupadas, true)) {
+                $fechasLibres[] = $fechaActual;
+            }
+
+            $cursor->addDay();
+        }
+
+        return $fechasLibres;
     }
 
     private function generarSesionesProgramadasPreview(Calendario $calendario, CarbonInterface $fechaInicio): array
