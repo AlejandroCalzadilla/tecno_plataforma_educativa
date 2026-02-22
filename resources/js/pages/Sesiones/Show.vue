@@ -135,7 +135,7 @@ const actualizarAsistencia = (asistenciaId: number, estadoAsistencia: string, ob
 
         <Head :title="`Sesión: ${session.servicio.nombre}`" />
 
-        <div class="py-12 bg-background">
+        <div class="py-12 bg-background  t ">
             <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
 
                 <div class="mb-6">

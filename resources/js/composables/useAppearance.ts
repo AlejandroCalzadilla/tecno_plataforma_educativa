@@ -18,7 +18,7 @@ export function updateTheme(value: Appearance): void {
     const root = document.documentElement;
     
     // Eliminar todas las clases de tema de color
-    root.classList.remove('theme-blue', 'theme-green', 'theme-purple');
+    root.classList.remove('theme-blue', 'theme-green', 'theme-purple','theme-kids');
 
     if (value === 'system') {
         const mediaQueryList = window.matchMedia(

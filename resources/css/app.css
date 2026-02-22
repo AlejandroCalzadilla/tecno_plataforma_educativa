@@ -6,6 +6,7 @@
 @source '../../storage/framework/views/*.php';
 
 @custom-variant dark (&:is(.dark *));
+@custom-variant kids (&:is(.theme-kids *));
 
 @theme inline {
     --font-sans:
@@ -70,6 +71,7 @@
   color utility to any element that depends on these defaults.
 */
 @layer base {
+
     *,
     ::after,
     ::before,
@@ -80,6 +82,7 @@
 }
 
 @layer utilities {
+
     body,
     html {
         --font-sans:
@@ -165,7 +168,7 @@
 /* ...existing code... */
 
 :root.theme-blue {
-     --background: hsl(210 60% 97%);
+    --background: hsl(210 60% 97%);
     --foreground: hsl(0 0% 3.9%);
     --card: hsl(0 0% 100%);
     --card-foreground: hsl(0 0% 3.9%);
@@ -314,6 +317,7 @@
     --sidebar-ring: hsl(142 71% 55%);
     --sidebar: hsl(142 25% 8%);
 }
+
 /* ── Tema Púrpura (claro) ── */
 :root.theme-purple {
     --background: hsl(270 50% 95%);
@@ -391,68 +395,72 @@
 }
 
 :root.theme-kids {
-    --background: hsl(320 100% 97%);
-    --foreground: hsl(280 60% 25%);
-    --card: hsl(0 0% 100%);
-    --card-foreground: hsl(280 60% 25%);
-    --popover: hsl(0 0% 100%);
-    --popover-foreground: hsl(280 60% 25%);
-    --primary: hsl(340 100% 65%);
-    --primary-foreground: hsl(0 0% 100%);
-    --secondary: hsl(200 100% 75%);
-    --secondary-foreground: hsl(280 60% 25%);
-    --muted: hsl(50 100% 92%);
-    --muted-foreground: hsl(280 40% 45%);
-    --accent: hsl(280 85% 70%);
-    --accent-foreground: hsl(0 0% 100%);
-    --destructive: hsl(0 100% 70%);
-    --destructive-foreground: hsl(0 0% 100%);
-    --border: hsl(290 60% 85%);
-    --input: hsl(290 50% 90%);
-    --ring: hsl(340 100% 65%);
-    --chart-1: hsl(340 100% 65%);
-    --chart-2: hsl(200 100% 60%);
-    --chart-3: hsl(50 100% 60%);
-    --chart-4: hsl(140 70% 60%);
-    --chart-5: hsl(280 85% 65%);
-    --radius: 1rem;
-    --sidebar-background: hsl(260 80% 92%);
-    --sidebar-foreground: hsl(280 60% 30%);
-    --sidebar-primary: hsl(340 100% 65%);
-    --sidebar-primary-foreground: hsl(0 0% 100%);
-    --sidebar-accent: hsl(200 100% 85%);
-    --sidebar-accent-foreground: hsl(280 60% 30%);
-    --sidebar-border: hsl(280 50% 80%);
-    --sidebar-ring: hsl(340 100% 65%);
-    --sidebar: hsl(260 80% 92%);
+    --background: hsl(48, 100%, 96%);
+  --foreground: hsl(222, 47%, 11%);
+  
+  --card: hsl(0, 0%, 100%);
+  --card-foreground: hsl(222, 47%, 11%);
+  
+  --popover: hsl(0, 0%, 100%);
+  --popover-foreground: hsl(222, 47%, 11%);
+  
+  --primary: hsl(122, 39%, 64%);
+  --primary-foreground: hsl(0, 0%, 100%);
+  
+  --secondary: hsl(45, 100%, 65%);
+  --secondary-foreground: hsl(222, 47%, 11%);
+  
+  --muted: hsl(210, 40%, 96.1%);
+  --muted-foreground: hsl(215.4, 16.3%, 46.9%);
+  
+  --accent: hsl(340, 82%, 66%);
+  --accent-foreground: hsl(0, 0%, 100%);
+  
+  --destructive: hsl(14, 100%, 79%);
+  --destructive-foreground: hsl(0, 0%, 100%);
+  
+  --border: hsl(199, 89%, 85%);
+  --input: hsl(199, 89%, 95%);
+  --ring: hsl(199, 89%, 64%);
+  
+  --radius: 2rem;
+
+  --sidebar-background: hsl(199, 89%, 64%);
+  --sidebar-foreground: hsl(0, 0%, 100%);
+  --sidebar-primary: hsl(14, 100%, 70%);
+  --sidebar-primary-foreground: hsl(0, 0%, 100%);
+  --sidebar-accent: hsl(199, 89%, 48%);
+  --sidebar-accent-foreground: hsl(0, 0%, 100%);
+  --sidebar-border: hsl(45, 100%, 65%);
+  --sidebar-ring: hsl(199, 89%, 85%);
+
+  --chart-1: hsl(199, 89%, 64%);
+  --chart-2: hsl(122, 39%, 64%);
+  --chart-3: hsl(45, 100%, 65%);
+  --chart-4: hsl(340, 82%, 66%);
+  --chart-5: hsl(14, 100%, 70%);
 }
 
-/* Patrón de fondo para tema kids */
-:root.theme-kids::before {
-    content: '';
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    z-index: -1;
-    background-color: hsl(320 100% 97%);
-    background-image: 
-        radial-gradient(circle at 20% 30%, hsla(340, 100%, 75%, 0.15) 0%, transparent 50%),
-        radial-gradient(circle at 80% 20%, hsla(200, 100%, 75%, 0.15) 0%, transparent 50%),
-        radial-gradient(circle at 40% 70%, hsla(50, 100%, 75%, 0.15) 0%, transparent 50%),
-        radial-gradient(circle at 90% 80%, hsla(140, 80%, 70%, 0.15) 0%, transparent 50%),
-        radial-gradient(circle at 10% 90%, hsla(280, 85%, 75%, 0.15) 0%, transparent 50%),
-        repeating-linear-gradient(45deg, transparent, transparent 60px, hsla(340, 100%, 85%, 0.08) 60px, hsla(340, 100%, 85%, 0.08) 65px),
-        repeating-linear-gradient(-45deg, transparent, transparent 60px, hsla(200, 100%, 85%, 0.08) 60px, hsla(200, 100%, 85%, 0.08) 65px);
-    pointer-events: none;
+
+/* Ajustes visuales de superficie únicamente en kids */
+:root.theme-kids [data-slot='sidebar-inset'] {
+    background-image:
+        linear-gradient(180deg, hsla(320, 100%, 98%, 0.95) 0%, hsla(280, 100%, 98%, 0.95) 100%),
+        radial-gradient(circle at 10% 10%, hsla(340, 100%, 78%, 0.18) 0 18%, transparent 19%),
+        radial-gradient(circle at 85% 20%, hsla(200, 100%, 75%, 0.18) 0 18%, transparent 19%);
 }
+
+:root.theme-kids .bg-card {
+    box-shadow: 0 2px 0 hsla(280, 50%, 40%, 0.08);
+}
+
 /* ...existing code... */
 
 @layer base {
     * {
         @apply border-border outline-ring/50;
     }
+
     body {
         @apply bg-background text-foreground;
     }
