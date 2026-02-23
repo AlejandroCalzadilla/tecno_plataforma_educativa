@@ -2,6 +2,7 @@
 
 namespace App\Http\Middleware;
 
+use App\Models\PageViewCounter;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
 use Tighten\Ziggy\Ziggy;
@@ -58,6 +59,23 @@ class HandleInertiaRequests extends Middleware
                 ]);
             },
             'sidebarOpen' => !$request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',
+            'pageViews' => function () use ($request) {
+                $routeNames = $request->session()->get('counted_route_names', []);
+
+                if (empty($routeNames)) {
+                    return [];
+                }
+
+                return PageViewCounter::query()
+                    ->whereIn('route_name', $routeNames)
+                    ->orderBy('route_name')
+                    ->get(['route_name', 'views'])
+                    ->map(fn (PageViewCounter $counter) => [
+                        'route_name' => $counter->route_name,
+                        'views' => (int) $counter->views,
+                    ])
+                    ->values();
+            },
         ];
 
     }
