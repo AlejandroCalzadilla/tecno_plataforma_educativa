@@ -12,21 +12,29 @@ class LicenciaController extends Controller
 {
     public function index(Request $request)
     {
-        $query = Licencia::with('asistencia.inscripcion.alumno.usuario')
-            ->orderByDesc('created_at');
-
-        if ($request->filled('search')) {
-            $search = $request->input('search');
-            $query->where('motivo', 'like', "%{$search}%");
+        $auth = $request->user();
+        if($auth?->is_alumno) {
+            $query = Licencia::with('asistencia.inscripcion.alumno.usuario')
+                ->whereHas('asistencia.inscripcion', function ($q) use ($auth) {
+                    $q->where('id_alumno', $auth->alumno->id);
+                })
+                ->orderByDesc('created_at');
+        } 
+        
+        elseif ($auth?->is_tutor) {
+            $query = Licencia::with('asistencia.inscripcion.alumno.usuario')
+                ->whereHas('asistencia.inscripcion', function ($q) use ($auth) {
+                    $q->whereHas('calendario', function ($q2) use ($auth) {
+                        $q2->where('id_tutor', $auth->tutor->id);
+                    });
+                })
+                ->orderByDesc('created_at');
+                
+        } else {
+            return Inertia::render('Licencias/Index', ['licencias' => []]);
         }
-
-        if ($request->filled('estado_aprobacion')) {
-            $query->where('estado_aprobacion', $request->input('estado_aprobacion'));
-        }
-
         return Inertia::render('Licencias/Index', [
-            'licencias' => $query->paginate(10)->withQueryString(),
-            'filters' => $request->only(['search', 'estado_aprobacion']),
+            'licencias' => $query->paginate(10),
         ]);
     }
 

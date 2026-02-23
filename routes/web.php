@@ -48,6 +48,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
     
     Route::get('sesiones', [SesionProgramadaController::class, 'index'])->name('sesiones.index');
     Route::get('sesiones/{sesion}', [SesionProgramadaController::class, 'show'])->name('sesiones.show');
+    Route::patch('sesiones/{sesion}/link', [SesionProgramadaController::class, 'updateLink'])
+        ->name('sesiones.link.update');
     Route::patch('sesiones/{sesion}/asistencias/{asistencia}', [SesionProgramadaController::class, 'updateAsistencia'])
         ->name('sesiones.asistencias.update');
 });

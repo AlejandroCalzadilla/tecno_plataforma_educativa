@@ -38,10 +38,8 @@ class SesionProgramadaController extends Controller
         } else {
             return Inertia::render('Sesiones/Index', ['sessions' => []]);
         }
-
         $sesiones = $query->get()->map(function (SesionProgramada $sesion) use ($user) {
             $asistenciaUsuario = null;
-
             if ($user?->is_alumno) {
                 $asistenciaUsuario = $sesion->asistencias
                     ->where('inscripcion.id_alumno', (int) $user->alumno?->id)
@@ -49,7 +47,6 @@ class SesionProgramadaController extends Controller
             } elseif ($user?->is_tutor) {
                 $asistenciaUsuario = $sesion->asistencias->first();
             }
-
             return [
                 'id' => $sesion->id,
                 'fecha_sesion' => $sesion->fecha_sesion,
@@ -59,7 +56,6 @@ class SesionProgramadaController extends Controller
                 'estado_asistencia' => $asistenciaUsuario?->estado_asistencia ?? 'PENDIENTE',
             ];
         })->values();
-
         return Inertia::render('Sesiones/Index', [
             'sessions' => $sesiones,
         ]);
@@ -152,6 +148,26 @@ class SesionProgramadaController extends Controller
             'session' => $sessionData,
         ]);
     }
+
+
+
+    public function updateLink(Request $request, SesionProgramada $sesion)
+    {
+        $user = $request->user();
+
+        if (!$user?->is_tutor || (int) $sesion->calendario?->id_tutor !== (int) $user->tutor?->id) {
+            abort(403, 'No tienes permiso para actualizar el link de esta sesión.');
+        }
+        $validated = $request->validate([
+            'link_sesion' => 'required|url|max:255',
+        ]);
+        $sesion->update([
+            'link_sesion' => $validated['link_sesion'],
+        ]);
+      return Redirect::back()->with('success', 'Link de sesión actualizado correctamente.');
+    }
+
+    
 
     public function updateAsistencia(Request $request, SesionProgramada $sesion, Asistencia $asistencia)
     {

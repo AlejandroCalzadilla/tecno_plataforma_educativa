@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue';
-import { Head, Link, router, usePage } from '@inertiajs/vue3';
+import { Head, Link, router, useForm, usePage } from '@inertiajs/vue3';
 import AppLayout from '@/layouts/AppLayout.vue';
 import {
     Calendar,
@@ -119,6 +119,16 @@ const cancelSession = () => {
 };
 
 const estadosAsistencia = ['PENDIENTE', 'PRESENTE', 'AUSENTE', 'TARDANZA', 'JUSTIFICADO'] as const;
+
+const linkForm = useForm({
+    link_sesion: props.session.link_virtual ?? '',
+});
+
+const actualizarLinkSesion = () => {
+    linkForm.patch(route('sesiones.link.update', props.session.id), {
+        preserveScroll: true,
+    });
+};
 
 const actualizarAsistencia = (asistenciaId: number, estadoAsistencia: string, observaciones?: string) => {
     router.patch(route('sesiones.asistencias.update', [props.session.id, asistenciaId]), {
@@ -260,15 +270,30 @@ const actualizarAsistencia = (asistenciaId: number, estadoAsistencia: string, ob
                                 </div>
 
                                 <div v-if="canCancelSession || canEditSession" class="flex flex-col gap-3">
-                                    <button v-if="canEditSession"
-                                        class="w-full py-3 bg-card border border-border hover:bg-muted font-bold rounded-xl transition-colors">
-                                        Editar Sesión
-                                    </button>
-                                    <button v-if="canCancelSession && session.status === 'PENDIENTE'"
+                                    <form v-if="canEditSession" class="space-y-3" @submit.prevent="actualizarLinkSesion">
+                                        <label class="block text-xs font-bold text-muted-foreground uppercase">Link de la sesión</label>
+                                        <input
+                                            v-model="linkForm.link_sesion"
+                                            type="url"
+                                            placeholder="https://..."
+                                            class="w-full px-3 py-2 border border-border rounded-lg bg-card"
+                                        />
+                                        <p v-if="linkForm.errors.link_sesion" class="text-sm text-destructive">
+                                            {{ linkForm.errors.link_sesion }}
+                                        </p>
+                                        <button
+                                            type="submit"
+                                            :disabled="linkForm.processing"
+                                            class="w-full py-3 bg-card border border-border hover:bg-muted font-bold rounded-xl transition-colors disabled:opacity-50"
+                                        >
+                                            {{ linkForm.processing ? 'Guardando...' : 'Actualizar link' }}
+                                        </button>
+                                    </form>
+                                   <!--  <button v-if="canCancelSession && session.status === 'PENDIENTE'"
                                         @click="cancelSession"
                                         class="w-full py-3 text-destructive hover:bg-destructive/10 font-bold rounded-xl transition-colors">
                                         Cancelar Sesión
-                                    </button>
+                                    </button> -->
                                 </div>
 
                             </div>

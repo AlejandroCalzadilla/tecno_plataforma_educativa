@@ -1,14 +1,19 @@
 <script setup lang="ts">
-import { Head, Link, router } from '@inertiajs/vue3';
+import { Head, Link, router, usePage } from '@inertiajs/vue3';
 import { ref } from 'vue';
 import { route } from 'ziggy-js';
 import AppLayout from '@/layouts/AppLayout.vue';
 import UserLayout from '@/layouts/UserLayout.vue';
 import { type BreadcrumbItem } from '@/types';
 
+interface Asistencia {
+    id: number;
+    fecha: string;
+    estado: 'ASISTIO' | 'FALTO' | 'TARDANZA';
+}
 interface Licencia {
     id_licencia: number;
-    id_asistencia: number;
+    asistencia: Asistencia;
     fecha_solicitud: string;
     motivo: string;
     estado_aprobacion: 'PENDIENTE' | 'APROBADA' | 'RECHAZADA';
@@ -28,6 +33,7 @@ interface Filters {
 const props = defineProps<{
     licencias: Pagination<Licencia>;
     filters?: Filters;
+    
 }>();
 
 const search = ref(props.filters?.search ?? '');
@@ -49,6 +55,10 @@ const eliminar = (id: number) => {
         router.delete(route('licencias.destroy', id));
     }
 };
+console.log(props.licencias);
+const page = usePage();
+const roles = page.props.auth.user.roles;
+console.log(roles);
 </script>
 
 <template>
@@ -72,7 +82,7 @@ const eliminar = (id: number) => {
                     <button class="px-3 py-2 bg-secondary text-secondary-foreground rounded-lg" @click="limpiar">Limpiar</button>
                 </div>
 
-                <div class="flex justify-end">
+                <div v-if="roles?.alumno" class="flex justify-end">
                     <Link :href="route('licencias.create')" class="px-4 py-2 bg-primary text-primary-foreground rounded-lg">Nueva licencia</Link>
                 </div>
 
@@ -90,12 +100,12 @@ const eliminar = (id: number) => {
                         <tbody>
                             <tr v-for="licencia in licencias.data" :key="licencia.id_licencia" class="border-b border-border/60">
                                 <td class="py-2 pr-3">{{ licencia.id_licencia }}</td>
-                                <td class="py-2 pr-3">{{ licencia.id_asistencia }}</td>
+                                <td class="py-2 pr-3">{{ licencia.asistencia.id }}</td> 
                                 <td class="py-2 pr-3">{{ licencia.motivo }}</td>
                                 <td class="py-2 pr-3">{{ licencia.estado_aprobacion }}</td>
                                 <td class="py-2 pr-3 space-x-2">
                                     <Link :href="route('licencias.edit', licencia.id_licencia)" class="px-3 py-1 bg-primary text-primary-foreground rounded">Editar</Link>
-                                    <button class="px-3 py-1 bg-destructive text-destructive-foreground rounded" @click="eliminar(licencia.id_licencia)">Eliminar</button>
+                                    <button v-if="roles?.alumno"  class="px-3 py-1 bg-destructive text-destructive-foreground rounded" @click="eliminar(licencia.id_licencia)">Eliminar</button>
                                 </td>
                             </tr>
                         </tbody>
