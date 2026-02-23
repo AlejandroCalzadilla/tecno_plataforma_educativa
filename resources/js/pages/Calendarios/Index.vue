@@ -5,6 +5,7 @@ import { type BreadcrumbItem } from '@/types';
 import UserLayout from '@/layouts/UserLayout.vue';
 import { ref } from 'vue';
 import { route } from 'ziggy-js';
+import inscripcion from '@/routes/catalogo/inscripcion';
 
 interface Calendario {
     id: number;
@@ -16,6 +17,7 @@ interface Calendario {
     servicio?: Servicio;
     tutor?: Tutor;
     disponibilidades?: Disponibilidad[];
+    inscripciones : any[]; // Solo para mostrar el número de inscripciones, no es necesario definir su estructura completa
 }
 
 interface Servicio {
@@ -103,6 +105,8 @@ const disponibilidadTexto = (items: Disponibilidad[] = []) => {
         .map((item) => `${item.dia_semana} ${item.hora_apertura.substring(0, 5)}-${item.hora_cierre.substring(0, 5)}`)
         .join(' | ');
 };
+
+console.log(props.calendarios);
 </script>
 
 <template>
@@ -130,12 +134,12 @@ const disponibilidadTexto = (items: Disponibilidad[] = []) => {
                         </option>
                     </select>
 
-                    <select v-model="selectedTutor" class="px-4 py-2 border border-border rounded-lg bg-card text-foreground">
+                    <!-- <select v-model="selectedTutor" class="px-4 py-2 border border-border rounded-lg bg-card text-foreground">
                         <option value="">Todos los tutores</option>
                         <option v-for="tutor in tutores" :key="tutor.id" :value="String(tutor.id)">
                             {{ tutorLabel(tutor) }}
                         </option>
-                    </select>
+                    </select> -->
 
                     <select v-model="selectedTipoProgramacion" class="px-4 py-2 border border-border rounded-lg bg-card text-foreground">
                         <option value="">Todos los tipos</option>
@@ -187,7 +191,7 @@ const disponibilidadTexto = (items: Disponibilidad[] = []) => {
                                 <td class="px-4 py-3">${{ calendario.costo_total }}</td>
                                 <td class="px-4 py-3">{{ calendario.cupos_maximos }}</td>
                                <!--  <td class="px-4 py-3">{{ disponibilidadTexto(calendario.disponibilidades) }}</td> -->
-                                <td class="px-4 py-3 text-right space-x-2">
+                                <td v-if="calendario.inscripciones.length == 0 " class="px-4 py-3 text-right space-x-2">
                                     <Link :href="route('calendarios.edit', calendario.id)" class="inline-flex px-3 py-1.5 rounded bg-primary text-primary-foreground">
                                         Editar
                                     </Link>

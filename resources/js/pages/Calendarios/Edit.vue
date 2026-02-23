@@ -4,6 +4,7 @@ import AppLayout from '@/layouts/AppLayout.vue';
 import { type BreadcrumbItem } from '@/types';
 import UserLayout from '@/layouts/UserLayout.vue';
 import { route } from 'ziggy-js';
+import { watch } from 'vue';
 
 type TipoProgramacion = 'CITA_LIBRE' | 'PAQUETE_FIJO';
 
@@ -36,7 +37,6 @@ interface Disponibilidad {
 interface Calendario {
     id: number;
     id_servicio: number;
-    id_tutor: number;
     tipo_programacion: TipoProgramacion;
     fecha_inicio: string | null;
     numero_sesiones: number | null;
@@ -59,7 +59,6 @@ const breadcrumbItems: BreadcrumbItem[] = [
 
 const form = useForm({
     id_servicio: String(props.calendario.id_servicio),
-    id_tutor: String(props.calendario.id_tutor),
     tipo_programacion: props.calendario.tipo_programacion,
     fecha_inicio: props.calendario.fecha_inicio ? String(props.calendario.fecha_inicio).substring(0, 10) : '',
     numero_sesiones: props.calendario.numero_sesiones ?? '',
@@ -95,6 +94,64 @@ const submit = () => {
     form.put(route('calendarios.update', props.calendario.id));
 };
 
+watch(
+    () => form.tipo_programacion,
+    (nuevoTipo) => {
+        if (nuevoTipo !== 'PAQUETE_FIJO') {
+            form.cupos_maximos = 1;
+        }
+    }
+);
+
+const calcularHoraCierre = (horaApertura: string, duracionMinutos: number | string): string => {
+    if (!horaApertura || !duracionMinutos) return '';
+
+    // Separamos horas y minutos
+    const [horas, minutos] = horaApertura.split(':').map(Number);
+    
+    // Calculamos el total de minutos transcurridos desde las 00:00
+    const totalMinutos = (horas * 60) + minutos + parseInt(duracionMinutos.toString());
+
+    // Obtenemos las nuevas horas y minutos (usamos % 1440 para no exceder las 24h)
+    const nuevasHoras = Math.floor((totalMinutos / 60) % 24);
+    const nuevosMinutos = totalMinutos % 60;
+
+    // Formateamos con ceros a la izquierda (HH:mm)
+    return `${String(nuevasHoras).padStart(2, '0')}:${String(nuevosMinutos).padStart(2, '0')}`;
+};
+
+// 1. Escuchar cuando cambia la DURACIÓN global
+watch(
+    () => form.duracion_sesion_minutos,
+    (nuevaDuracion) => {
+        if (!nuevaDuracion) return;
+        form.disponibilidades.forEach((disp) => {
+            if (disp.hora_apertura) {
+                disp.hora_cierre = calcularHoraCierre(disp.hora_apertura, nuevaDuracion);
+            }
+        });
+    }
+);
+
+// 2. Escuchar cuando cambia cualquier HORA DE APERTURA individualmente
+watch(
+    () => form.disponibilidades,
+    (nuevaDisp) => {
+        nuevaDisp.forEach((disp) => {
+            // Solo recalculamos si hay apertura y la duración está definida
+            if (disp.hora_apertura && form.duracion_sesion_minutos) {
+                const nuevaHoraCierre = calcularHoraCierre(disp.hora_apertura, form.duracion_sesion_minutos);
+                
+                // Evitamos bucles infinitos comparando antes de asignar
+                if (disp.hora_cierre !== nuevaHoraCierre) {
+                    disp.hora_cierre = nuevaHoraCierre;
+                }
+            }
+        });
+    },
+    { deep: true } // Crucial para detectar cambios dentro del array
+);
+
 const tutorLabel = (tutor: Tutor) => tutor.usuario?.name ?? `Tutor ${tutor.id}`;
 </script>
 
@@ -118,7 +175,7 @@ const tutorLabel = (tutor: Tutor) => tutor.usuario?.name ?? `Tutor ${tutor.id}`;
                             <p v-if="form.errors.id_servicio" class="text-sm text-red-600 mt-1">{{ form.errors.id_servicio }}</p>
                         </div>
 
-                        <div>
+                        <!-- <div>
                             <label class="block text-sm mb-1">Tutor</label>
                             <select v-model="form.id_tutor" class="w-full px-3 py-2 border border-border rounded-lg bg-card">
                                 <option value="">Seleccione</option>
@@ -127,7 +184,7 @@ const tutorLabel = (tutor: Tutor) => tutor.usuario?.name ?? `Tutor ${tutor.id}`;
                                 </option>
                             </select>
                             <p v-if="form.errors.id_tutor" class="text-sm text-red-600 mt-1">{{ form.errors.id_tutor }}</p>
-                        </div>
+                        </div> -->
 
                         <div>
                             <label class="block text-sm mb-1">Tipo de programación</label>
@@ -156,17 +213,22 @@ const tutorLabel = (tutor: Tutor) => tutor.usuario?.name ?? `Tutor ${tutor.id}`;
                         </div>
                     </div>
 
-                    <div v-if="form.tipo_programacion === 'PAQUETE_FIJO'" class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                       <div v-if="form.tipo_programacion === 'PAQUETE_FIJO'" class="grid grid-cols-1 md:grid-cols-3 gap-4">
                         <div>
                             <label class="block text-sm mb-1">Fecha de inicio del curso</label>
-                            <input v-model="form.fecha_inicio" type="date" class="w-full px-3 py-2 border border-border rounded-lg bg-card" />
-                            <p v-if="form.errors.fecha_inicio" class="text-sm text-red-600 mt-1">{{ form.errors.fecha_inicio }}</p>
+                            <input v-model="form.fecha_inicio" type="date"
+                                class="w-full px-3 py-2 border border-border rounded-lg bg-card" />
+                            <p v-if="form.errors.fecha_inicio" class="text-sm text-red-600 mt-1">{{
+                                form.errors.fecha_inicio }}</p>
                         </div>
                         <div>
                             <label class="block text-sm mb-1">Número de sesiones</label>
-                            <input v-model="form.numero_sesiones" type="number" min="1" class="w-full px-3 py-2 border border-border rounded-lg bg-card" />
-                            <p v-if="form.errors.numero_sesiones" class="text-sm text-red-600 mt-1">{{ form.errors.numero_sesiones }}</p>
+                            <input v-model="form.numero_sesiones" type="number" min="1"
+                                class="w-full px-3 py-2 border border-border rounded-lg bg-card" />
+                            <p v-if="form.errors.numero_sesiones" class="text-sm text-red-600 mt-1">{{
+                                form.errors.numero_sesiones }}</p>
                         </div>
+
                     </div>
 
                     <div class="space-y-3">
@@ -182,7 +244,7 @@ const tutorLabel = (tutor: Tutor) => tutor.usuario?.name ?? `Tutor ${tutor.id}`;
                                 <option v-for="dia in diasSemana" :key="dia" :value="dia">{{ dia }}</option>
                             </select>
                             <input v-model="item.hora_apertura" type="time" class="px-3 py-2 border border-border rounded-lg bg-card" />
-                            <input v-model="item.hora_cierre" type="time" class="px-3 py-2 border border-border rounded-lg bg-card" />
+                            <input v-model="item.hora_cierre" type="time" class="px-3 py-2 border border-border rounded-lg bg-card" readonly />
                             <button type="button" class="px-3 py-2 bg-destructive text-destructive-foreground rounded" @click="removeDisponibilidad(index)">
                                 Quitar
                             </button>

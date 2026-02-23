@@ -84,12 +84,7 @@ const allNavItems: (NavItem & { role?: string[] })[] = [
         icon: Banknote,
         role: ['propietario'], // Solo admin
     },
-    {
-        title: 'Asistencia',
-        href: dashboard(),
-        icon: ListTodo,
-        role: ['tutor'], // Solo tutor
-    },
+    
      {
         title: 'Licencias',
         href: route('licencias.index'),

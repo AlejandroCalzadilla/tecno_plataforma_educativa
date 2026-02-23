@@ -18,7 +18,10 @@ class CalendarioController extends Controller
 {
     public function index(Request $request)
     {
-        $query = Calendario::with(['servicio', 'tutor.usuario', 'disponibilidades'])
+
+         $authUser = auth()->user();
+          $query = Calendario::with(['servicio', 'tutor.usuario', 'disponibilidades','inscripciones'])
+            ->where('id_tutor', $authUser->tutor->id)
             ->orderBy('created_at', 'desc');
 
         if ($request->filled('search')) {
@@ -32,18 +35,14 @@ class CalendarioController extends Controller
             $query->where('id_servicio', $request->input('id_servicio'));
         }
 
-        if ($request->filled('id_tutor')) {
-            $query->where('id_tutor', $request->input('id_tutor'));
-        }
-
         if ($request->filled('tipo_programacion')) {
             $query->where('tipo_programacion', $request->input('tipo_programacion'));
         }
-
+       
         $calendarios = $query->paginate(10)->withQueryString();
+        //dd($calendarios);
         $servicios = Servicio::all();
         $tutores = Tutor::with('usuario:id,name')->get();
-
         return Inertia::render('Calendarios/Index', [
             'calendarios' => $calendarios,
             'servicios' => $servicios,
@@ -65,9 +64,11 @@ class CalendarioController extends Controller
 
     public function store(Request $request)
     {
+
+        $authUser = auth()->user();
+        $tutorId = $authUser->tutor->id;
         $validated = $request->validate([
             'id_servicio' => 'required|exists:servicio,id',
-            'id_tutor' => 'required|exists:tutor,id',
             'tipo_programacion' => 'required|in:CITA_LIBRE,PAQUETE_FIJO',
             'fecha_inicio' => 'nullable|date|required_if:tipo_programacion,PAQUETE_FIJO',
             'numero_sesiones' => 'nullable|integer|min:1|required_if:tipo_programacion,PAQUETE_FIJO',
@@ -85,18 +86,18 @@ class CalendarioController extends Controller
             
         ]);
 
-        if ($this->tieneCruceDisponibilidadTutor($validated['id_tutor'], $validated['disponibilidades'])) {
+        if ($this->tieneCruceDisponibilidadTutor($tutorId, $validated['disponibilidades'])) {
             return Redirect::back()
                 ->withErrors(['disponibilidades' => 'El tutor tiene conflicto de disponibilidad en uno o más rangos.'])
                 ->withInput();
         }
 
-        DB::transaction(function () use ($validated) {
+        DB::transaction(function () use ($validated, $tutorId) {
             $isPaquete = $validated['tipo_programacion'] === 'PAQUETE_FIJO';
 
             $calendario = Calendario::create([
                 'id_servicio' => $validated['id_servicio'],
-                'id_tutor' => $validated['id_tutor'],
+                'id_tutor' => $tutorId,
                 'tipo_programacion' => $validated['tipo_programacion'],
                 'fecha_inicio' => $isPaquete ? $validated['fecha_inicio'] : null,
                 'numero_sesiones' => $isPaquete ? $validated['numero_sesiones'] : null,
@@ -124,6 +125,7 @@ class CalendarioController extends Controller
 
     public function edit(Calendario $calendario)
     {
+       
         $calendario->load(['disponibilidades']);
         $servicios = Servicio::all();
         $tutores = Tutor::with('usuario:id,name')->get();
@@ -137,9 +139,10 @@ class CalendarioController extends Controller
 
     public function update(Request $request, Calendario $calendario)
     {
+        $authUser = auth()->user();
+        $id_tutor = $authUser->tutor->id;
         $validated = $request->validate([
             'id_servicio' => 'required|exists:servicio,id',
-            'id_tutor' => 'required|exists:tutor,id',
             'tipo_programacion' => 'required|in:CITA_LIBRE,PAQUETE_FIJO',
             'fecha_inicio' => 'nullable|date|required_if:tipo_programacion,PAQUETE_FIJO',
             'numero_sesiones' => 'nullable|integer|min:1|required_if:tipo_programacion,PAQUETE_FIJO',
@@ -152,18 +155,18 @@ class CalendarioController extends Controller
             'disponibilidades.*.hora_cierre' => 'required|date_format:H:i|after:disponibilidades.*.hora_apertura',
         ]);
 
-        if ($this->tieneCruceDisponibilidadTutor($validated['id_tutor'], $validated['disponibilidades'], $calendario->id)) {
+        if ($this->tieneCruceDisponibilidadTutor($id_tutor, $validated['disponibilidades'], $calendario->id)) {
             return Redirect::back()
                 ->withErrors(['disponibilidades' => 'El tutor tiene conflicto de disponibilidad en uno o más rangos.'])
                 ->withInput();
         }
 
-        DB::transaction(function () use ($validated, $calendario) {
+        DB::transaction(function () use ($validated, $calendario, $id_tutor) {
             $isPaquete = $validated['tipo_programacion'] === 'PAQUETE_FIJO';
 
             $calendario->update([
                 'id_servicio' => $validated['id_servicio'],
-                'id_tutor' => $validated['id_tutor'],
+                'id_tutor' => $id_tutor,
                 'tipo_programacion' => $validated['tipo_programacion'],
                 'fecha_inicio' => $isPaquete ? $validated['fecha_inicio'] : null,
                 'numero_sesiones' => $isPaquete ? $validated['numero_sesiones'] : null,
