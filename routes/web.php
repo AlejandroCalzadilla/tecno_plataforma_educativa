@@ -4,6 +4,7 @@ use App\Http\Controllers\CategoriaController;
 use App\Http\Controllers\ServicioController;
 use App\Http\Controllers\CalendarioController;
 use App\Http\Controllers\CatalogoController;
+use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\InformeClaseController;
 use App\Http\Controllers\LicenciaController;
 use App\Http\Controllers\PagoController;
@@ -20,16 +21,17 @@ Route::get('/', function () {
 })->name('home');
 
 Route::get('dashboard', function () {
-
-  if (auth()->user()->is_alumno) {
+    if (auth()->user()->is_alumno) {
         return redirect()->route('catalogo.index');
     } elseif (auth()->user()->is_tutor) {
         return redirect()->route('informes-clase.index');
-    } elseif (auth()->user()->is_propietario) {
-        return Inertia::render('Dashboard');
     }
-    return Inertia::render('Dashboard');
+    return redirect()->route('dashboard.index');
 })->middleware(['auth', 'verified'])->name('dashboard');
+
+Route::get('dashboard/kpis', [DashboardController::class, 'index'])
+    ->middleware(['auth', 'verified'])
+    ->name('dashboard.index');
 
 require __DIR__ . '/settings.php';
 

@@ -38,7 +38,7 @@ const currentPageView = computed<PageViewItem | null>(() => {
 <template>
     <aside
         v-if="currentPageView"
-        class="fixed bottom-4 right-4 z-50 w-80 rounded-xl border border-border bg-card p-4 shadow-sm"
+        class="fixed bottom-4 right-4 z-50 w-80 rounded-xl border border-border bg-card p-4 shadow-sm opacity-45    "
     >
         <h4 class="mb-3 text-sm font-bold text-foreground">Visitas por página</h4>
         <div class="flex items-center justify-between rounded-lg bg-muted/40 px-3 py-2">
