@@ -8,6 +8,7 @@ use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\InformeClaseController;
 use App\Http\Controllers\LicenciaController;
 use App\Http\Controllers\PagoController;
+use App\Http\Controllers\PagoFacilController;
 use App\Http\Controllers\SesionProgramadaController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
@@ -54,6 +55,22 @@ Route::middleware(['auth', 'verified'])->group(function () {
         ->name('sesiones.link.update');
     Route::patch('sesiones/{sesion}/asistencias/{asistencia}', [SesionProgramadaController::class, 'updateAsistencia'])
         ->name('sesiones.asistencias.update');
+});
+
+// ------------------------------------------------------------------
+// PagoFácil (QR)
+// ------------------------------------------------------------------
+
+// Callback público: PagoFácil llama a esta URL sin cookie/CSRF
+Route::post('pagofacil/callback', [PagoFacilController::class, 'callback'])
+    ->name('pagofacil.callback')
+    ->withoutMiddleware(['web']);
+
+Route::middleware(['auth', 'verified'])->prefix('pagofacil')->name('pagofacil.')->group(function () {
+    Route::post('generar-qr',      [PagoFacilController::class, 'generarQR'])->name('generar-qr');
+    Route::post('consultar',       [PagoFacilController::class, 'consultarEstado'])->name('consultar');
+    Route::post('confirmar',       [PagoFacilController::class, 'confirmarPagoCuota'])->name('confirmar');
+    Route::post('verificar-cuota', [PagoFacilController::class, 'verificarCuota'])->name('verificar-cuota');
 });
 
 Route::prefix('catalogo')->name('catalogo.')->group(function () {

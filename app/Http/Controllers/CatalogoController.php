@@ -3,10 +3,13 @@
 namespace App\Http\Controllers;
 
 use App\Models\Calendario;
+use App\Models\CategoriaNivel;
+use App\Models\Cuota;
 use App\Models\Inscripcion;
 use App\Models\Asistencia;
 use App\Models\SesionProgramada;
 use App\Models\Servicio;
+use App\Models\Venta;
 use Carbon\Carbon;
 use Carbon\CarbonInterface;
 use Illuminate\Support\Facades\DB;
@@ -20,6 +23,7 @@ class CatalogoController extends Controller
     {
         $query = Servicio::query()
             ->where('estado_activo', true)
+            ->with('categoria:id,nombre,id_categoria_padre') 
             ->withCount('calendarios')
             ->orderBy('nombre');
 
@@ -42,9 +46,10 @@ class CatalogoController extends Controller
         }
 
         $servicios = $query->paginate(9)->withQueryString();
-
+        $categorias = CategoriaNivel::get();
         return Inertia::render('Catalogo/Index', [
             'servicios' => $servicios,
+            'categorias' => $categorias,
             'filters' => $request->only(['search', 'modalidad']),
         ]);
     }
@@ -228,7 +233,7 @@ class CatalogoController extends Controller
             $fechasDisponiblesCitaLibre = $this->obtenerFechasDisponiblesCitaLibre($calendario, $fechaMinimaCita, $fechaMaximaCita);
 
             if (!in_array($fechaInicio->toDateString(), $fechasDisponiblesCitaLibre, true)) {
-                return Redirect::back()->withErrors([
+              return Redirect::back()->withErrors([
                     'pago' => 'La fecha seleccionada ya no está disponible para esta cita libre.',
                 ]);
             }
@@ -243,7 +248,7 @@ class CatalogoController extends Controller
         }
         //dd('llega al trabajo');
         try {
-            $inscripcion = DB::transaction(function () use ($validated, $calendario, $sesionesProgramadas, $fechaInicio) {
+            $result = DB::transaction(function () use ($validated, $calendario, $sesionesProgramadas, $fechaInicio) {
                 $inscripcion = Inscripcion::create([
                     'id_alumno' => $validated['id_alumno'],
                     'id_calendario' => $calendario->id,
@@ -307,7 +312,42 @@ class CatalogoController extends Controller
                     ]);
                 }
 
-                return $inscripcion;
+                // ── Crear Venta ──────────────────────────────────────────
+                $tipoPago       = $validated['tipo_pago_pref'];
+                $cantidadCuotas = $tipoPago === 'CONTADO' ? 1 : (int) ($validated['cantidad_cuotas'] ?? 1);
+                $montoTotal     = (float) $calendario->costo_total;
+
+                $venta = Venta::create([
+                    'id_inscripcion'    => $inscripcion->id,
+                    'monto_total'       => $montoTotal,
+                    'saldo_pendiente'   => $montoTotal,
+                    'tipo_pago_pref'    => $tipoPago,
+                    'estado_financiero' => 'PENDIENTE',
+                ]);
+
+                // ── Crear Cuotas ─────────────────────────────────────────
+                $montoPorCuota = round($montoTotal / $cantidadCuotas, 2);
+                $primeraCuota  = null;
+
+                for ($i = 1; $i <= $cantidadCuotas; $i++) {
+                    $monto = $i === $cantidadCuotas
+                        ? round($montoTotal - ($montoPorCuota * ($cantidadCuotas - 1)), 2)
+                        : $montoPorCuota;
+
+                    $cuota = Cuota::create([
+                        'id_venta'          => $venta->id,
+                        'numero_cuota'      => $i,
+                        'monto_cuota'       => $monto,
+                        'fecha_vencimiento' => Carbon::parse($fechaInicio)->addMonths($i - 1)->toDateString(),
+                        'estado_pago'       => 'PENDIENTE',
+                    ]);
+
+                    if ($i === 1) {
+                        $primeraCuota = $cuota;
+                    }
+                }
+
+                return compact('inscripcion', 'primeraCuota');
             });
         } catch (\RuntimeException $exception) {
             return Redirect::back()->withErrors([
@@ -315,8 +355,22 @@ class CatalogoController extends Controller
             ]);
         }
 
+        $inscripcion  = $result['inscripcion'];
+        $primeraCuota = $result['primeraCuota'];
+
+        // QR → devolver JSON para que el frontend muestre el QR en la misma página
+        if ($validated['metodo_pago'] === 'QR') {
+            return response()->json([
+                'success'         => true,
+                'id_cuota'        => $primeraCuota->id,
+                'monto'           => (string) $primeraCuota->monto_cuota,
+                'numero_cuota'    => 1,
+                'servicio_nombre' => $calendario->servicio->nombre ?? 'Servicio',
+            ]);
+        }
+
         return Redirect::route('catalogo.index')
-            ->with('success', 'Pago simulado correctamente. Inscripción #' . $inscripcion->id . ' guardada con sus sesiones programadas.');
+            ->with('success', 'Inscripción #' . $inscripcion->id . ' creada correctamente.');
     }
 
     private function rangoCitaLibrePermitido(): array
@@ -453,21 +507,26 @@ class CatalogoController extends Controller
         if ($cantidadCuotas <= 1) {
             return [
                 [
-                    'numero_cuota' => 1,
-                    'monto_cuota' => number_format($montoTotal, 2, '.', ''),
-                    'fecha_vencimiento' => $fechaBase->toDateString(),
+                    'numero_cuota'     => 1,
+                    'monto_cuota'      => number_format($montoTotal, 2, '.', ''),
+                    'fecha_vencimiento'=> $fechaBase->toDateString(),
                 ]
             ];
         }
 
         $montoCuota = round($montoTotal / $cantidadCuotas, 2);
-        $cuotas = [];
+        $cuotas     = [];
 
-        for ($index = 1; $index <= $cantidadCuotas; $index++) {
+        for ($i = 1; $i <= $cantidadCuotas; $i++) {
+            // La última cuota absorbe la diferencia de redondeo
+            $monto = $i === $cantidadCuotas
+                ? round($montoTotal - ($montoCuota * ($cantidadCuotas - 1)), 2)
+                : $montoCuota;
+
             $cuotas[] = [
-                'numero_cuota' => $index,
-                'monto_cuota' => number_format($montoCuota, 2, '.', ''),
-                'fecha_vencimiento' => $fechaBase->copy()->addMonths($index - 1)->toDateString(),
+                'numero_cuota'      => $i,
+                'monto_cuota'       => number_format($monto, 2, '.', ''),
+                'fecha_vencimiento' => $fechaBase->copy()->addMonths($i - 1)->toDateString(),
             ];
         }
 

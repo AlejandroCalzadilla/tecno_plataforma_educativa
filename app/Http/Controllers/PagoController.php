@@ -15,8 +15,9 @@ class PagoController extends Controller
 {
     public function index(Request $request): Response
     {
-        $user = $request->user();
-        $ventaId = $request->query('venta_id');
+        $user       = $request->user();
+        $ventaId    = $request->query('venta_id');
+        $qrCuotaId  = $request->query('qr_cuota');
 
         if ($user?->is_propietario) {
             $ventas = Venta::query()
@@ -70,8 +71,9 @@ class PagoController extends Controller
                 : Cuota::query()->whereRaw('1 = 0')->paginate(10, ['*'], 'cuotas_page');
 
             return Inertia::render('Pagos/IndexAlumno', [
-                'pagos' => $pagos,
-                'cuotas' => $cuotas,
+                'pagos'      => $pagos,
+                'cuotas'     => $cuotas,
+                'qrCuotaId'  => $qrCuotaId ? (int) $qrCuotaId : null,
             ]);
         }
         abort(403, 'No tienes permisos para acceder a pagos.');
