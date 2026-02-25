@@ -52,7 +52,7 @@ const allNavItems: (NavItem & { role?: string[] })[] = [
         title: 'Oferta Academica',
         href:route('calendarios.index'),
         icon: CalendarRange,
-        role: ['propietario','tutor'], // Solo alumno
+        role: ['tutor'], // Solo alumno
     },
     {
         title: 'Reportes',
