@@ -89,7 +89,7 @@ const allNavItems: (NavItem & { role?: string[] })[] = [
         title: 'Licencias',
         href: route('licencias.index'),
         icon: ListTodo,
-        role: ['tutor','alumno'], // Solo tutor
+        role: ['tutor','alumno','propietario'], // Solo tutor
 
      },
      {
