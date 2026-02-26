@@ -139,7 +139,7 @@ const eliminar = (id: number) => {
                             <tr class="border-b border-border text-left">
                                 <th class="py-2 pr-3">ID</th>
                                 <th class="py-2 pr-3">Sesión / Fecha</th>
-                                <th v-if="modo !== 'alumno'" class="py-2 pr-3">Alumno</th>
+                             <!--    <th v-if="modo !== 'alumno'" class="py-2 pr-3">Alumno</th> -->
                                 <th v-if="modo === 'admin'" class="py-2 pr-3">Tutor / Servicio</th>
                                 <th class="py-2 pr-3">Motivo</th>
                                 <th class="py-2 pr-3">Solicitud</th>

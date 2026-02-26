@@ -3,6 +3,7 @@ import Breadcrumbs from '@/components/Breadcrumbs.vue';
 import GlobalRouteSearch from '@/components/GlobalRouteSearch.vue';
 import { SidebarTrigger } from '@/components/ui/sidebar';
 import type { BreadcrumbItem } from '@/types';
+import AppearanceTabs from './AppearanceTabs.vue';
 
 withDefaults(
     defineProps<{
@@ -23,6 +24,9 @@ withDefaults(
             <template v-if="breadcrumbs && breadcrumbs.length > 0">
                 <Breadcrumbs :breadcrumbs="breadcrumbs" />
             </template>
+        </div>
+        <div class="ml-auto w-full max-w-md">
+             <AppearanceTabs />
         </div>
         <div class="ml-auto w-full max-w-md">
             <GlobalRouteSearch />
