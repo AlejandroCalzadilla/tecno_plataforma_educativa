@@ -11,9 +11,32 @@ use Inertia\Response;
 
 class SesionProgramadaController extends Controller
 {
+    private function resolverModo(Request $request): string
+    {
+        $user = $request->user();
+        $modoSolicitado = $request->query('modo', $request->input('modo'));
+
+        if ($user?->is_alumno && $user?->is_tutor) {
+            return in_array($modoSolicitado, ['alumno', 'tutor'], true)
+                ? $modoSolicitado
+                : 'alumno';
+        }
+
+        if ($user?->is_alumno) {
+            return 'alumno';
+        }
+
+        if ($user?->is_tutor) {
+            return 'tutor';
+        }
+
+        return 'ninguno';
+    }
+
     public function index(Request $request): Response
     {
         $user = $request->user();
+        $modo = $this->resolverModo($request);
 
         $query = SesionProgramada::query()
             ->select([
@@ -27,24 +50,24 @@ class SesionProgramadaController extends Controller
                 'asistencias.inscripcion.alumno.usuario',
             ]);
 
-        if ($user?->is_alumno) {
+        if ($modo === 'alumno') {
             $query->whereHas('asistencias.inscripcion', function ($q) use ($user) {
                 $q->where('id_alumno', $user->alumno->id);
             });
-        } elseif ($user?->is_tutor) {
+        } elseif ($modo === 'tutor') {
             $query->whereHas('calendario', function ($q) use ($user) {
                 $q->where('id_tutor', $user->tutor->id);
             });
         } else {
-            return Inertia::render('Sesiones/Index', ['sessions' => []]);
+            return Inertia::render('Sesiones/Index', ['sessions' => [], 'modo' => 'ninguno']);
         }
-        $sesiones = $query->get()->map(function (SesionProgramada $sesion) use ($user) {
+        $sesiones = $query->get()->map(function (SesionProgramada $sesion) use ($user, $modo) {
             $asistenciaUsuario = null;
-            if ($user?->is_alumno) {
+            if ($modo === 'alumno') {
                 $asistenciaUsuario = $sesion->asistencias
                     ->where('inscripcion.id_alumno', (int) $user->alumno?->id)
                     ->first();
-            } elseif ($user?->is_tutor) {
+            } elseif ($modo === 'tutor') {
                 $asistenciaUsuario = $sesion->asistencias->first();
             }
             return [
@@ -58,6 +81,7 @@ class SesionProgramadaController extends Controller
         })->values();
         return Inertia::render('Sesiones/Index', [
             'sessions' => $sesiones,
+            'modo' => $modo,
         ]);
     }
 
@@ -65,6 +89,7 @@ class SesionProgramadaController extends Controller
     public function show(Request $request, SesionProgramada $sesion): Response
     {
         $user = $request->user();
+        $modo = $this->resolverModo($request);
 
         $sesion->load([
             'calendario.servicio.categoria',
@@ -74,24 +99,34 @@ class SesionProgramadaController extends Controller
             'asistencias.informe',
         ]);
 
-        $asistenciaUsuario = null;
-
-        if ($user?->is_tutor) {
-            if ((int) $sesion->calendario?->id_tutor !== (int) $user->tutor?->id) {
-                abort(403, 'No tienes permiso para ver esta sesión.');
-            }
-            $asistenciaUsuario = $sesion->asistencias->first();
-        } elseif ($user?->is_alumno) {
-            $asistenciaUsuario = $sesion->asistencias
+        $esTutorDeSesion = (bool) ($user?->is_tutor && (int) $sesion->calendario?->id_tutor === (int) $user->tutor?->id);
+        $asistenciaComoAlumno = $user?->is_alumno
+            ? $sesion->asistencias
                 ->where('inscripcion.id_alumno', (int) $user->alumno?->id)
-                ->first();
+                ->first()
+            : null;
 
-            if (!$asistenciaUsuario) {
-                abort(403, 'No tienes permiso para ver esta sesión.');
-            }
-        } else {
+        $accesoTutor = $esTutorDeSesion;
+        $accesoAlumno = (bool) $asistenciaComoAlumno;
+
+        if (!$accesoTutor && !$accesoAlumno) {
             abort(403, 'No tienes permiso para ver esta sesión.');
         }
+
+        $rolActivo = null;
+        if ($modo === 'tutor' && $accesoTutor) {
+            $rolActivo = 'tutor';
+        } elseif ($modo === 'alumno' && $accesoAlumno) {
+            $rolActivo = 'alumno';
+        } elseif ($accesoTutor) {
+            $rolActivo = 'tutor';
+        } else {
+            $rolActivo = 'alumno';
+        }
+
+        $asistenciaUsuario = $rolActivo === 'tutor'
+            ? $sesion->asistencias->first()
+            : $asistenciaComoAlumno;
 
         $sessionData = [
             'id' => $sesion->id,
@@ -140,7 +175,9 @@ class SesionProgramadaController extends Controller
                     ],
                 ],
             ])->values(),
-            'es_tutor' => (bool) $user?->is_tutor,
+            'es_tutor' => $rolActivo === 'tutor',
+            'es_alumno' => $rolActivo === 'alumno',
+            'modo_activo' => $rolActivo,
             'informes' => $asistenciaUsuario?->informe ? [$asistenciaUsuario->informe] : []
         ];
 

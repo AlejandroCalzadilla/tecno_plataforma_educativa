@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import { Head } from '@inertiajs/vue3';
+import { route } from 'ziggy-js';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { type BreadcrumbItem } from '@/types';
 import KpiCard from '@/components/dashboard/KpiCard.vue';
@@ -187,6 +188,17 @@ const periodoLabel = computed(() => {
     const h = new Date(props.filtros.hasta + 'T12:00:00');
     return `${d.toLocaleDateString('es-AR', { day: '2-digit', month: 'short' })} – ${h.toLocaleDateString('es-AR', { day: '2-digit', month: 'short', year: 'numeric' })}`;
 });
+
+const exportParams = computed(() => ({
+    desde: props.filtros.desde,
+    hasta: props.filtros.hasta,
+    servicio: props.filtros.servicio ?? undefined,
+    modalidad: props.filtros.modalidad ?? undefined,
+    estado_academico: props.filtros.estado_academico ?? undefined,
+}));
+
+const pdfExportUrl = computed(() => route('dashboard.export.pdf', exportParams.value));
+const excelExportUrl = computed(() => route('dashboard.export.excel', exportParams.value));
 </script>
 
 <template>
@@ -204,9 +216,23 @@ const periodoLabel = computed(() => {
             <!-- Sub-título del período -->
             <div class="flex items-center justify-between">
                 <h2 class="text-lg font-bold text-foreground">Resumen del período</h2>
-                <span class="rounded-full bg-muted px-3 py-1 text-xs font-medium text-muted-foreground">
-                    📅 {{ periodoLabel }}
-                </span>
+                <div class="flex items-center gap-2">
+                    <span class="rounded-full bg-muted px-3 py-1 text-xs font-medium text-muted-foreground">
+                        📅 {{ periodoLabel }}
+                    </span>
+                    <a
+                        :href="pdfExportUrl"
+                        class="rounded-lg border border-input bg-background px-3 py-1.5 text-xs font-semibold text-foreground transition hover:bg-muted"
+                    >
+                        Exportar PDF
+                    </a>
+                    <a
+                        :href="excelExportUrl"
+                        class="rounded-lg bg-primary px-3 py-1.5 text-xs font-semibold text-primary-foreground transition hover:opacity-90"
+                    >
+                        Exportar Excel
+                    </a>
+                </div>
             </div>
 
             <!-- ====== SECCIÓN 1: KPIs PRINCIPALES ====== -->

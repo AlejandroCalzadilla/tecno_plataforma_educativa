@@ -12,6 +12,7 @@ use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Redirect;
+use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
 
 class LicenciaController extends Controller
@@ -23,6 +24,7 @@ class LicenciaController extends Controller
     public function index(Request $request)
     {
         $auth = $request->user();
+        $modo = $this->resolverModo($request);
 
         $base = Licencia::with([
             'asistencia.sesion.calendario.servicio:id,nombre',
@@ -30,46 +32,50 @@ class LicenciaController extends Controller
             'asistencia.inscripcion.alumno.usuario:id,name',
         ])->orderByDesc('created_at');
 
-        if ($auth?->is_alumno) {
-            $base->whereHas('asistencia.inscripcion', fn($q) =>
+        if ($modo === 'alumno') {
+            $base->whereHas(
+                'asistencia.inscripcion',
+                fn($q) =>
                 $q->where('id_alumno', $auth->alumno->id)
             );
             $this->applyFiltrosBasicos($base, $request);
 
-            //dd($base->paginate(10)->withQueryString());   
             return Inertia::render('Licencias/Index', [
                 'licencias' => $base->paginate(10)->withQueryString(),
-                'filters'   => $request->only(['search', 'estado_aprobacion']),
-                'modo'      => 'alumno',
+                'filters' => $request->only(['search', 'estado_aprobacion']),
+                'modo' => 'alumno',
             ]);
         }
 
-        if ($auth?->is_tutor) {
-            $base->whereHas('asistencia.inscripcion.calendario', fn($q) =>
+        if ($modo === 'tutor') {
+            $base->whereHas(
+                'asistencia.inscripcion.calendario',
+                fn($q) =>
                 $q->where('id_tutor', $auth->tutor->id)
             );
             $this->applyFiltrosBasicos($base, $request);
 
             return Inertia::render('Licencias/Index', [
                 'licencias' => $base->paginate(10)->withQueryString(),
-                'filters'   => $request->only(['search', 'estado_aprobacion', 'fecha_desde', 'fecha_hasta']),
-                'modo'      => 'tutor',
+                'filters' => $request->only(['search', 'estado_aprobacion', 'fecha_desde', 'fecha_hasta']),
+                'modo' => 'tutor',
             ]);
         }
+
 
         // Propietario / admin: todos con filtros ricos
         $this->applyFiltrosBasicos($base, $request);
         $this->applyFiltrosAdmin($base, $request);
 
-        $tutores   = Tutor::with('usuario:id,name')->get()
+        $tutores = Tutor::with('usuario:id,name')->get()
             ->map(fn($t) => ['id' => $t->id, 'nombre' => $t->usuario?->name ?? '—']);
         $servicios = Servicio::select('id', 'nombre')->orderBy('nombre')->get();
 
         return Inertia::render('Licencias/Index', [
             'licencias' => $base->paginate(15)->withQueryString(),
-            'filters'   => $request->only(['search', 'estado_aprobacion', 'fecha_desde', 'fecha_hasta', 'id_tutor', 'id_servicio']),
-            'modo'      => 'admin',
-            'tutores'   => $tutores,
+            'filters' => $request->only(['search', 'estado_aprobacion', 'fecha_desde', 'fecha_hasta', 'id_tutor', 'id_servicio']),
+            'modo' => 'admin',
+            'tutores' => $tutores,
             'servicios' => $servicios,
         ]);
     }
@@ -87,7 +93,9 @@ class LicenciaController extends Controller
             ->whereDoesntHave('licencia');
 
         if ($auth?->is_alumno) {
-            $query->whereHas('inscripcion', fn($q) =>
+            $query->whereHas(
+                'inscripcion',
+                fn($q) =>
                 $q->where('id_alumno', $auth->alumno->id)
             );
         }
@@ -96,8 +104,8 @@ class LicenciaController extends Controller
 
         return Inertia::render('Licencias/Create', [
             'sesiones' => $sesiones->map(fn($a) => [
-                'id'            => $a->id,
-                'fecha_sesion'  => $a->sesion?->fecha_sesion,
+                'id' => $a->id,
+                'fecha_sesion' => $a->sesion?->fecha_sesion,
                 'numero_sesion' => $a->sesion?->numero_sesion,
             ])->values(),
         ]);
@@ -111,15 +119,21 @@ class LicenciaController extends Controller
     {
         $validated = $request->validate([
             'id_asistencia' => 'required|exists:asistencia,id|unique:licencia,id_asistencia',
-            'motivo'        => 'required|string',
-            'evidencia_url' => 'nullable|string|max:255',
+            'motivo' => 'required|string',
+            'evidencia_url' => 'nullable|image|max:4096',
         ]);
+
+        $evidenciaPath = null;
+        if ($request->hasFile('evidencia_url')) {
+            $evidenciaPath = $request->file('evidencia_url')->store('licencias', 'public');
+        }
 
         // Estado y observacion los controla únicamente el tutor/admin
         Licencia::create(array_merge($validated, [
+            'evidencia_url' => $evidenciaPath,
             'estado_aprobacion' => 'PENDIENTE',
             'observacion_admin' => null,
-            'fecha_solicitud'   => now()->toDateString(),
+            'fecha_solicitud' => now()->toDateString(),
         ]));
 
         return Redirect::route('licencias.index')->with('success', 'Licencia enviada correctamente.');
@@ -132,6 +146,7 @@ class LicenciaController extends Controller
     public function edit(Licencia $licencia)
     {
         $auth = request()->user();
+        $modo = $this->resolverModo(request());
 
         $licencia->load(['asistencia.sesion.calendario.disponibilidades']);
 
@@ -155,14 +170,14 @@ class LicenciaController extends Controller
         }
 
         return Inertia::render('Licencias/Edit', [
-            'licencia'      => $licencia,
-            'sesiones'      => $sesiones->map(fn($a) => [
-                'id'            => $a->id,
-                'fecha_sesion'  => $a->sesion?->fecha_sesion,
+            'licencia' => $licencia,
+            'sesiones' => $sesiones->map(fn($a) => [
+                'id' => $a->id,
+                'fecha_sesion' => $a->sesion?->fecha_sesion,
                 'numero_sesion' => $a->sesion?->numero_sesion,
             ])->values(),
             'fechaSugerida' => $fechaSugerida,
-            'modo'          => $auth?->is_alumno ? 'alumno' : ($auth?->is_tutor ? 'tutor' : 'admin'),
+            'modo' => $modo,
         ]);
     }
 
@@ -173,22 +188,43 @@ class LicenciaController extends Controller
     public function update(Request $request, Licencia $licencia)
     {
         $auth = $request->user();
+        $modo = $this->resolverModo($request);
 
         // ── Alumno: solo puede editar motivo / evidencia (si sigue PENDIENTE) ──
-        if ($auth?->is_alumno) {
-            $validated = $request->validate([
+        if ($modo === 'alumno') {
+            if ($licencia->estado_aprobacion !== 'PENDIENTE') {
+                return Redirect::back()->withErrors([
+                    'licencia' => 'Solo puedes editar la licencia mientras esté en estado PENDIENTE.',
+                ]);
+            }
+            
+           // Verificar qué datos llegan en la solicitud de actualización del alumno
+           $validated = $request->validate([
                 'id_asistencia' => 'required|exists:asistencia,id|unique:licencia,id_asistencia,' . $licencia->id_licencia . ',id_licencia',
-                'motivo'        => 'required|string',
-                'evidencia_url' => 'nullable|string|max:255',
+                'motivo' => 'required|string',
+                'evidencia_url' => 'nullable|image|max:4096',
             ]);
-            $licencia->update($validated);
+             
+            $payload = [
+                'id_asistencia' => $validated['id_asistencia'],
+                'motivo' => $validated['motivo'],
+            ];
+
+            if ($request->hasFile('evidencia_url')) {
+                if ($licencia->evidencia_url) {
+                    Storage::disk('public')->delete($licencia->evidencia_url);
+                }
+                $payload['evidencia_url'] = $request->file('evidencia_url')->store('licencias', 'public');
+            }
+
+            $licencia->update($payload);
             return Redirect::route('licencias.index')->with('success', 'Licencia actualizada.');
         }
 
         // ── Tutor / Admin: pueden cambiar estado + observacion + reprogramar ──
         $validated = $request->validate([
-            'estado_aprobacion'    => 'required|in:PENDIENTE,APROBADA,RECHAZADA',
-            'observacion_admin'    => 'nullable|string',
+            'estado_aprobacion' => 'required|in:PENDIENTE,APROBADA,RECHAZADA',
+            'observacion_admin' => 'nullable|string',
             'fecha_reprogramacion' => 'nullable|date|after_or_equal:today',
         ]);
 
@@ -199,7 +235,7 @@ class LicenciaController extends Controller
             ])->firstOrFail();
 
             $sesionOriginal = $asistencia->sesion;
-            $calendario     = $sesionOriginal->calendario;
+            $calendario = $sesionOriginal->calendario;
 
             // Buscar slot: fecha exacta pedida por tutor o la próxima disponible
             $slot = null;
@@ -235,19 +271,19 @@ class LicenciaController extends Controller
                 // Crear nueva sesión programada
                 $nuevaSesion = SesionProgramada::create([
                     'id_calendario' => $calendario->id,
-                    'fecha_sesion'  => $slot['fecha_sesion'],
-                    'hora_inicio'   => $slot['hora_inicio'],
-                    'hora_fin'      => $slot['hora_fin'],
-                    'link_sesion'   => null,
+                    'fecha_sesion' => $slot['fecha_sesion'],
+                    'hora_inicio' => $slot['hora_inicio'],
+                    'hora_fin' => $slot['hora_fin'],
+                    'link_sesion' => null,
                     'numero_sesion' => null,
                 ]);
 
                 // Nueva asistencia para la misma inscripción
                 Asistencia::create([
-                    'id_sesion'         => $nuevaSesion->id,
-                    'id_inscripcion'    => $asistencia->id_inscripcion,
+                    'id_sesion' => $nuevaSesion->id,
+                    'id_inscripcion' => $asistencia->id_inscripcion,
                     'estado_asistencia' => 'PENDIENTE',
-                    'observaciones'     => 'Reprogramada por licencia #' . $licencia->id_licencia,
+                    'observaciones' => 'Reprogramada por licencia #' . $licencia->id_licencia,
                 ]);
 
                 // Actualizar licencia
@@ -268,6 +304,28 @@ class LicenciaController extends Controller
         ]);
 
         return Redirect::route('licencias.index')->with('success', 'Licencia actualizada.');
+    }
+
+    private function resolverModo(Request $request): string
+    {
+        $auth = $request->user();
+        $modoSolicitado = $request->input('modo', $request->query('modo'));
+
+        if ($auth?->is_alumno && $auth?->is_tutor) {
+            return in_array($modoSolicitado, ['alumno', 'tutor'], true)
+                ? $modoSolicitado
+                : 'alumno';
+        }
+
+        if ($auth?->is_alumno) {
+            return 'alumno';
+        }
+
+        if ($auth?->is_tutor) {
+            return 'tutor';
+        }
+
+        return 'admin';
     }
 
     // ─────────────────────────────────────────────────────────────────
@@ -305,8 +363,13 @@ class LicenciaController extends Controller
         }
 
         $diaMap = [
-            1 => 'LUNES', 2 => 'MARTES', 3 => 'MIERCOLES',
-            4 => 'JUEVES', 5 => 'VIERNES', 6 => 'SABADO', 7 => 'DOMINGO',
+            1 => 'LUNES',
+            2 => 'MARTES',
+            3 => 'MIERCOLES',
+            4 => 'JUEVES',
+            5 => 'VIERNES',
+            6 => 'SABADO',
+            7 => 'DOMINGO',
         ];
 
         if ($fechaExacta) {
@@ -320,7 +383,7 @@ class LicenciaController extends Controller
 
         while ($cursor->lessThanOrEqualTo($limite)) {
             $diaActual = $diaMap[$cursor->dayOfWeekIso] ?? null;
-            $bloque    = $disponibilidades->firstWhere('dia_semana', $diaActual);
+            $bloque = $disponibilidades->firstWhere('dia_semana', $diaActual);
 
             if ($bloque) {
                 $ocupada = Asistencia::query()
@@ -333,13 +396,14 @@ class LicenciaController extends Controller
                 if (!$ocupada) {
                     return [
                         'fecha_sesion' => $cursor->toDateString(),
-                        'hora_inicio'  => $bloque->hora_apertura,
-                        'hora_fin'     => $bloque->hora_cierre,
+                        'hora_inicio' => $bloque->hora_apertura,
+                        'hora_fin' => $bloque->hora_cierre,
                     ];
                 }
             }
 
-            if ($fechaExacta) break;
+            if ($fechaExacta)
+                break;
             $cursor->addDay();
         }
 
@@ -365,12 +429,16 @@ class LicenciaController extends Controller
     private function applyFiltrosAdmin($query, Request $request): void
     {
         if ($request->filled('id_tutor')) {
-            $query->whereHas('asistencia.inscripcion.calendario', fn($q) =>
+            $query->whereHas(
+                'asistencia.inscripcion.calendario',
+                fn($q) =>
                 $q->where('id_tutor', $request->id_tutor)
             );
         }
         if ($request->filled('id_servicio')) {
-            $query->whereHas('asistencia.inscripcion.calendario', fn($q) =>
+            $query->whereHas(
+                'asistencia.inscripcion.calendario',
+                fn($q) =>
                 $q->where('id_servicio', $request->id_servicio)
             );
         }

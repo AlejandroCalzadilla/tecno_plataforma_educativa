@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Middleware\CheckCuotasVencidas;
 use App\Http\Middleware\HandleAppearance;
 use App\Http\Middleware\CountPageViews;
 use App\Http\Middleware\HandleInertiaRequests;
@@ -22,6 +23,7 @@ return Application::configure(basePath: dirname(__DIR__))
             CountPageViews::class,
             HandleInertiaRequests::class,
             AddLinkHeadersForPreloadedAssets::class,
+            CheckCuotasVencidas::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

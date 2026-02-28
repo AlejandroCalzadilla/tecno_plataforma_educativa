@@ -58,6 +58,9 @@ const breadcrumbItems: BreadcrumbItem[] = [{ title: 'Licencias', href: '/licenci
 const page  = usePage();
 const roles = page.props.auth.user.roles;
 const esAlumno = computed(() => !!roles?.alumno);
+const esTutor = computed(() => !!roles?.tutor);
+const puedeCambiarModo = computed(() => esAlumno.value && esTutor.value);
+const modoActivo = ref(props.modo);
 
 const badgeClass = (e: string) => ({
     PENDIENTE: 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300',
@@ -67,6 +70,7 @@ const badgeClass = (e: string) => ({
 
 const filtrar = () => {
     router.get(route('licencias.index'), {
+        modo:                modoActivo.value,
         search:              search.value,
         estado_aprobacion:   estado.value,
         fecha_desde:         fechaDesde.value,
@@ -94,9 +98,24 @@ const eliminar = (id: number) => {
             <div class="space-y-4">
                 <div class="bg-card border border-border rounded-xl p-5 flex items-center justify-between">
                     <h1 class="text-xl font-bold">Licencias</h1>
-                    <Link v-if="esAlumno" :href="route('licencias.create')" class="px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm">
+                    <div class="flex items-center gap-2">
+                        <select
+                            v-if="puedeCambiarModo"
+                            v-model="modoActivo"
+                            class="px-3 py-2 border border-border rounded-lg bg-card text-sm"
+                            @change="filtrar"
+                        >
+                            <option value="alumno">Ver como alumno</option>
+                            <option value="tutor">Ver como tutor</option>
+                        </select>
+                        <Link
+                            v-if="esAlumno && modoActivo === 'alumno'"
+                            :href="route('licencias.create', { modo: modoActivo })"
+                            class="px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm"
+                        >
                         + Nueva solicitud
-                    </Link>
+                        </Link>
+                    </div>
                 </div>
 
                 <!-- Filtros -->
@@ -169,8 +188,8 @@ const eliminar = (id: number) => {
                                     </span>
                                 </td>
                                 <td class="py-2 pr-3 space-x-2 whitespace-nowrap">
-                                    <Link :href="route('licencias.edit', lic.id_licencia)" class="px-3 py-1 bg-primary text-primary-foreground rounded text-xs">Editar</Link>
-                                    <button v-if="esAlumno" class="px-3 py-1 bg-destructive text-destructive-foreground rounded text-xs" @click="eliminar(lic.id_licencia)">Eliminar</button>
+                                    <Link :href="route('licencias.edit', { licencia: lic.id_licencia, modo: modoActivo })" class="px-3 py-1 bg-primary text-primary-foreground rounded text-xs">Editar</Link>
+                                    <button v-if="esAlumno && modoActivo === 'alumno'" class="px-3 py-1 bg-destructive text-destructive-foreground rounded text-xs" @click="eliminar(lic.id_licencia)">Eliminar</button>
                                 </td>
                             </tr>
                             <tr v-if="licencias.data.length === 0">

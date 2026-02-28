@@ -34,6 +34,11 @@ Route::get('dashboard/kpis', [DashboardController::class, 'index'])
     ->middleware(['auth', 'verified'])
     ->name('dashboard.index');
 
+Route::middleware(['auth', 'verified'])->prefix('dashboard')->name('dashboard.')->group(function () {
+    Route::get('export/pdf', [DashboardController::class, 'exportPdf'])->name('export.pdf');
+    Route::get('export/excel', [DashboardController::class, 'exportExcel'])->name('export.excel');
+});
+
 require __DIR__ . '/settings.php';
 
 
@@ -46,6 +51,7 @@ Route::resource('informes-clase', InformeClaseController::class);
 
 
 Route::middleware(['auth', 'verified'])->group(function () {
+    Route::get('pagos/cuotas-vencidas', [PagoController::class, 'forzado'])->name('pagos.forzado');
     Route::get('pagos', [PagoController::class, 'index'])->name('pagos.index');
     Route::post('pagos/cuotas/{cuota}/pagar', [PagoController::class, 'pagarCuota'])->name('pagos.pagar-cuota');
     

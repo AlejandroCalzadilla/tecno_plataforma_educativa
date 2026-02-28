@@ -126,11 +126,17 @@ const confirmarPago = async () => {
             const { data: ins } = await axios.post(
                 route('catalogo.inscripcion.confirmar-pago', props.calendario.id),
                 {
-                    id_alumno:       form.id_alumno,
+                   // id_alumno:       form.id_alumno,
                     fecha_inicio:    form.fecha_inicio,
                     tipo_pago_pref:  form.tipo_pago_pref,
                     cantidad_cuotas: form.cantidad_cuotas,
                     metodo_pago:     form.metodo_pago,
+                },
+                {
+                    headers: {
+                        Accept: 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest',
+                    },
                 },
             );
             if (!ins.success) throw new Error(ins.message ?? 'Error al crear inscripción');
@@ -255,17 +261,17 @@ onUnmounted(detenerPolling);
 
                 <form class="bg-card border border-border rounded-xl p-5 space-y-4" @submit.prevent="confirmarPago">
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-                        <div>
+                       <!--  <div>
                             <label class="block text-sm mb-1">ID alumno *</label>
                             <input v-model="form.id_alumno" type="number" min="1" class="w-full px-3 py-2 border border-border rounded-lg bg-card" />
                             <p v-if="form.errors.id_alumno" class="text-sm text-red-600 mt-1">{{ form.errors.id_alumno }}</p>
-                        </div>
+                        </div> -->
 
-                        <div>
+                       <!--  <div>
                             <label class="block text-sm mb-1">Fecha inicio sesiones *</label>
                             <input v-model="form.fecha_inicio" type="date" class="w-full px-3 py-2 border border-border rounded-lg bg-card" />
                             <p v-if="form.errors.fecha_inicio" class="text-sm text-red-600 mt-1">{{ form.errors.fecha_inicio }}</p>
-                        </div>
+                        </div> -->
 
                         <div>
                             <label class="block text-sm mb-1">Tipo de pago</label>

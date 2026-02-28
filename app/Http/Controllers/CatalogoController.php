@@ -152,6 +152,8 @@ class CatalogoController extends Controller
     public function pago(Request $request, Calendario $calendario)
     {
 
+
+        // dd("es aca no");
         //dd($request->all(), "que llega al controlador");
 
         $validated = $request->validate([
@@ -205,10 +207,22 @@ class CatalogoController extends Controller
 
     public function confirmarPago(Request $request, Calendario $calendario)
     {
+        $authUser = auth()->user();
+        $alumno = $authUser?->alumno;
+
+        if (!$alumno) {
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Debes iniciar sesión como alumno para confirmar el pago.',
+                ], 401);
+            }
+
+            return Redirect::route('login');
+        }
 
         //dd($request, "datos recibidos para confirmar pago");
         $validated = $request->validate([
-            'id_alumno' => 'required|integer|exists:alumno,id',
             'fecha_inicio' => 'required|date',
             'tipo_pago_pref' => 'required|in:CONTADO,CUOTAS',
 
@@ -233,7 +247,14 @@ class CatalogoController extends Controller
             $fechasDisponiblesCitaLibre = $this->obtenerFechasDisponiblesCitaLibre($calendario, $fechaMinimaCita, $fechaMaximaCita);
 
             if (!in_array($fechaInicio->toDateString(), $fechasDisponiblesCitaLibre, true)) {
-              return Redirect::back()->withErrors([
+                if ($request->expectsJson()) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'La fecha seleccionada ya no está disponible para esta cita libre.',
+                    ], 422);
+                }
+
+                return Redirect::back()->withErrors([
                     'pago' => 'La fecha seleccionada ya no está disponible para esta cita libre.',
                 ]);
             }
@@ -242,15 +263,22 @@ class CatalogoController extends Controller
         $sesionesProgramadas = $this->generarSesionesProgramadasPreview($calendario, $fechaInicio);
 
         if ($calendario->tipo_programacion === 'CITA_LIBRE' && count($sesionesProgramadas) === 0) {
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'No se pudo generar la sesión para este calendario. Revisa su disponibilidad.',
+                ], 422);
+            }
+
             return Redirect::back()->withErrors([
                 'pago' => 'No se pudo generar la sesión para este calendario. Revisa su disponibilidad.',
             ]);
         }
         //dd('llega al trabajo');
         try {
-            $result = DB::transaction(function () use ($validated, $calendario, $sesionesProgramadas, $fechaInicio) {
+            $result = DB::transaction(function () use ($validated, $calendario, $sesionesProgramadas, $fechaInicio, $alumno) {
                 $inscripcion = Inscripcion::create([
-                    'id_alumno' => $validated['id_alumno'],
+                    'id_alumno' => $alumno->id,
                     'id_calendario' => $calendario->id,
                     'fecha_inscripcion' => now(),
                     'estado_academico' => 'CURSANDO',
@@ -350,6 +378,13 @@ class CatalogoController extends Controller
                 return compact('inscripcion', 'primeraCuota');
             });
         } catch (\RuntimeException $exception) {
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => $exception->getMessage(),
+                ], 422);
+            }
+
             return Redirect::back()->withErrors([
                 'pago' => $exception->getMessage(),
             ]);

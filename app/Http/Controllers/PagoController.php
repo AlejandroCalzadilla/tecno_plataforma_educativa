@@ -13,6 +13,34 @@ use Illuminate\Support\Facades\DB;
 
 class PagoController extends Controller
 {
+    /**
+     * Pantalla de pago forzado: muestra solo las cuotas VENCIDO del alumno.
+     * El middleware CheckCuotasVencidas redirige aquí automáticamente.
+     */
+    public function forzado(Request $request): Response|\Illuminate\Http\Response
+    {
+        $user   = $request->user();
+        $alumno = $user->alumno;
+
+        $cuotas = Cuota::query()
+            ->whereHas('venta.inscripcion', fn ($q) =>
+                $q->where('id_alumno', $alumno->id)
+            )
+            ->where('estado_pago', 'VENCIDO')
+            ->with(['venta.inscripcion.calendario.servicio'])
+            ->orderBy('fecha_vencimiento')
+            ->get();
+
+        // Si ya no quedan vencidas, redirige a su ruta normal
+        if ($cuotas->isEmpty()) {
+            return Inertia::location(route('catalogo.index'));
+        }
+
+        return Inertia::render('Pagos/PagoForzado', [
+            'cuotas' => $cuotas,
+        ]);
+    }
+
     public function index(Request $request): Response
     {
         $user       = $request->user();

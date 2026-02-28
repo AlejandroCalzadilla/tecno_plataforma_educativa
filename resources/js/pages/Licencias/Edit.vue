@@ -32,7 +32,8 @@ const props = defineProps<{
 const formAlumno = useForm({
     id_asistencia: String(props.licencia.id_asistencia),
     motivo:        props.licencia.motivo,
-    evidencia_url: props.licencia.evidencia_url ?? '',
+    evidencia_url: null as File | null,
+    modo:          'alumno',
 });
 
 // Tutor/admin edita estado, observacion y reprogramación
@@ -40,6 +41,7 @@ const formTutor = useForm({
     estado_aprobacion:    props.licencia.estado_aprobacion,
     observacion_admin:    props.licencia.observacion_admin ?? '',
     fecha_reprogramacion: props.fechaSugerida ?? '',
+    modo:                 props.modo === 'admin' ? 'admin' : 'tutor',
 });
 
 // Cuando cambia estado a no-APROBADA limpiar fecha sugerida
@@ -63,7 +65,17 @@ const breadcrumbItems: BreadcrumbItem[] = [
     { title: 'Editar', href: `/licencias/${props.licencia.id_licencia}/edit` },
 ];
 
-const submitAlumno   = () => formAlumno.put(route('licencias.update', props.licencia.id_licencia));
+const evidenciaPreviewUrl = computed(() => {
+    const value = props.licencia.evidencia_url;
+    if (!value) return null;
+    if (value.startsWith('http://') || value.startsWith('https://')) return value;
+    return `/storage/${value}`;
+});
+
+
+const submitAlumno   = () => formAlumno
+    .transform((data) => ({ ...data, _method: 'put' }))
+    .post(route('licencias.update', props.licencia.id_licencia), { forceFormData: true });
 const submitTutor    = () => formTutor.put(route('licencias.update', props.licencia.id_licencia));
 </script>
 
@@ -87,6 +99,16 @@ const submitTutor    = () => formTutor.put(route('licencias.update', props.licen
                     <div v-if="licencia.observacion_admin" class="mt-3 rounded-lg bg-muted/40 px-3 py-2 text-sm">
                         <span class="font-medium">Observación:</span> {{ licencia.observacion_admin }}
                     </div>
+                     <div v-if="esTutorAdmin && evidenciaPreviewUrl" class="mt-4">
+                        <p class="text-sm font-medium mb-2">Evidencia adjunta</p>
+                        <a :href="evidenciaPreviewUrl" target="_blank" rel="noopener noreferrer" class="inline-block">
+                            <img
+                                :src="evidenciaPreviewUrl"
+                                alt="Evidencia de licencia"
+                                class="h-24 w-24 rounded-lg border border-border object-cover"
+                            />
+                        </a>
+                    </div>
                 </div>
 
                 <!-- Formulario ALUMNO -->
@@ -109,11 +131,17 @@ const submitTutor    = () => formTutor.put(route('licencias.update', props.licen
                             <p v-if="formAlumno.errors.motivo" class="text-sm text-red-600 mt-1">{{ formAlumno.errors.motivo }}</p>
                         </div>
                         <div>
-                            <label class="block text-sm mb-1">Evidencia URL</label>
-                            <input v-model="formAlumno.evidencia_url" type="text" class="w-full px-3 py-2 border border-border rounded-lg bg-card" />
+                            <label class="block text-sm mb-1">Evidencia (imagen)</label>
+                            <input
+                                type="file"
+                                accept="image/*"
+                                class="w-full px-3 py-2 border border-border rounded-lg bg-card"
+                                @change="formAlumno.evidencia_url = ($event.target as HTMLInputElement).files?.[0] ?? null"
+                            />
+                            <p v-if="formAlumno.errors.evidencia_url" class="text-sm text-red-600 mt-1">{{ formAlumno.errors.evidencia_url }}</p>
                         </div>
                         <div class="flex gap-2 justify-end">
-                            <Link :href="route('licencias.index')" class="px-4 py-2 bg-secondary text-secondary-foreground rounded-lg">Cancelar</Link>
+                            <Link :href="route('licencias.index', { modo: 'alumno' })" class="px-4 py-2 bg-secondary text-secondary-foreground rounded-lg">Cancelar</Link>
                             <button type="submit" class="px-4 py-2 bg-primary text-primary-foreground rounded-lg" :disabled="formAlumno.processing">Guardar</button>
                         </div>
                     </form>
@@ -162,7 +190,7 @@ const submitTutor    = () => formTutor.put(route('licencias.update', props.licen
                         </div>
 
                         <div class="flex gap-2 justify-end">
-                            <Link :href="route('licencias.index')" class="px-4 py-2 bg-secondary text-secondary-foreground rounded-lg">Cancelar</Link>
+                            <Link :href="route('licencias.index', { modo: formTutor.modo })" class="px-4 py-2 bg-secondary text-secondary-foreground rounded-lg">Cancelar</Link>
                             <button
                                 type="submit"
                                 class="px-4 py-2 text-white font-medium rounded-lg transition-colors"

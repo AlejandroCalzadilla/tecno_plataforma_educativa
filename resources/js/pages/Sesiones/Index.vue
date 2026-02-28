@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue';
-import { router } from '@inertiajs/vue3';
+import { router, usePage } from '@inertiajs/vue3';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { CalendarRange, ChevronLeft, ChevronRight } from 'lucide-vue-next';
 import { route } from 'ziggy-js';
@@ -26,7 +26,15 @@ interface CalendarDay {
 // 2. Definición de Props (Lo que viene del controlador)
 const props = defineProps < {
     sessions: Session[];
+    modo?: 'alumno' | 'tutor' | 'ninguno';
 } > ();
+
+const page = usePage();
+const roles = page.props.auth.user.roles;
+const esAlumno = computed(() => !!roles?.alumno);
+const esTutor = computed(() => !!roles?.tutor);
+const puedeCambiarModo = computed(() => esAlumno.value && esTutor.value);
+const modoActivo = ref(props.modo ?? (esAlumno.value ? 'alumno' : esTutor.value ? 'tutor' : 'ninguno'));
 
 // 3. Estados Reactivos
 const currentDate = ref < Date > (new Date());
@@ -53,7 +61,6 @@ const calendarDays = computed((): CalendarDay[] => {
 
     const days: CalendarDay[] = [];
     const d = new Date(startDate);
-    console.log('Generando calendario para:', props.sessions);
     // Generamos exactamente 6 semanas (42 días) para un diseño estable
     while (days.length < 42) {
         // Filtrar sesiones que correspondan a este día 'd'
@@ -102,10 +109,15 @@ const selectDay = (day: CalendarDay): void => {
 };
 
 const viewSession = (id: number): void => {
-    router.get(route('sesiones.show', id));
+    router.get(route('sesiones.show', { sesion: id, modo: modoActivo.value }));
 };
 
-console.log('Sesiones recibidas para el calendario:', props.sessions);
+const cambiarModo = (): void => {
+    router.get(route('sesiones.index'), { modo: modoActivo.value }, {
+        preserveState: true,
+        preserveScroll: true,
+    });
+};
 </script>
 
 <template>
@@ -115,8 +127,23 @@ console.log('Sesiones recibidas para el calendario:', props.sessions);
                 <div class="flex items-center gap-2">
                     <CalendarRange class="w-6 h-6 text-primary" />
                     <h2 class="text-2xl font-bold capitalize">{{ currentMonthName }} {{ currentYear }}</h2>
+                    <span
+                        v-if="modoActivo !== 'ninguno'"
+                        class="inline-flex items-center rounded-full border border-border bg-muted px-2.5 py-1 text-xs font-medium capitalize"
+                    >
+                        Modo actual: {{ modoActivo }}
+                    </span>
                 </div>
-                <div class="flex gap-2">
+                <div class="flex gap-2 items-center">
+                    <select
+                        v-if="puedeCambiarModo"
+                        v-model="modoActivo"
+                        class="px-3 py-2 border border-border rounded-lg bg-card text-sm"
+                        @change="cambiarModo"
+                    >
+                        <option value="alumno">Ver como alumno</option>
+                        <option value="tutor">Ver como tutor</option>
+                    </select>
                     <button @click="previousMonth" class="p-2 hover:bg-muted rounded-full border border-border">
                         <ChevronLeft class="w-5 h-5" />
                     </button>

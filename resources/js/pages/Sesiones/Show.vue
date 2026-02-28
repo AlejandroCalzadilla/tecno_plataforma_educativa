@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue';
-import { Head, Link, router, useForm, usePage } from '@inertiajs/vue3';
+import { Head, Link, router, useForm } from '@inertiajs/vue3';
 import AppLayout from '@/layouts/AppLayout.vue';
 import {
     Calendar,
@@ -64,6 +64,8 @@ interface SessionDetail {
         };
     }[];
     es_tutor?: boolean;
+    es_alumno?: boolean;
+    modo_activo?: 'tutor' | 'alumno';
     informes?: Informe[];
 }
 
@@ -72,19 +74,13 @@ const props = defineProps<{
     session: SessionDetail;
 }>();
 
-const page = usePage();
-
 // 3. Computed Properties con lógica de Roles
 const canEditSession = computed(() => {
-    const user = page.props.auth.user;
-    return user?.roles?.tutor && props.session.tutor.user.id === user?.id; // id_actor sería el ID en la tabla tutor
+    return !!props.session.es_tutor;
 });
 
 const canCancelSession = computed(() => {
-    const user = page.props.auth.user;
-    const isTutorOwner = user?.roles?.tutor && props.session.tutor.user.id === user?.id;
-    const isAlumnoOwner = user?.roles?.alumno && props.session.alumno.user.id === user?.id;
-    return isTutorOwner || isAlumnoOwner;
+    return !!props.session.es_tutor || !!props.session.es_alumno;
 });
 
 // 4. Utilidades
@@ -164,6 +160,11 @@ const actualizarAsistencia = (asistenciaId: number, estadoAsistencia: string, ob
                                     {{ session.servicio.categoria_nivel.nombre }}
                                 </span>
                                 <h1 class="text-3xl font-bold text-foreground mt-1">{{ session.servicio.nombre }}</h1>
+                                <div v-if="session.modo_activo" class="mt-2">
+                                    <span class="inline-flex items-center rounded-full border border-border bg-muted px-2.5 py-1 text-xs font-medium capitalize">
+                                        Modo actual: {{ session.modo_activo }}
+                                    </span>
+                                </div>
                             </div>
 
                             <div class="flex items-center gap-3">
