@@ -54,12 +54,7 @@ const allNavItems: (NavItem & { role?: string[] })[] = [
         icon: CalendarRange,
         role: ['tutor'], // Solo alumno
     },
-    {
-        title: 'Reportes',
-        href: dashboard(),
-        icon: CalendarRange,
-        role: ['propietario'], // Solo admin
-    },
+   
     {
         title: 'Catalogo',
         href: route('catalogo.index'),

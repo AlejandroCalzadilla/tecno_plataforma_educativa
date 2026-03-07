@@ -24,7 +24,6 @@ return new class extends Migration {
             ])->default('PENDIENTE_PAGO');
             $table->decimal('calificacion_final', 4, 2)->nullable();
             $table->timestamps();
-            $table->unique(['id_alumno', 'id_calendario']); // evita doble inscripción
         });
 
 

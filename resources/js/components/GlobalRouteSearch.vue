@@ -21,6 +21,38 @@ const query = ref('');
 const notFoundInPage = ref(false);
 const HIGHLIGHT_ATTR = 'data-global-search-highlight';
 
+const userRoles = computed(() => page.props.auth?.user?.roles as {
+    propietario?: boolean;
+    tutor?: boolean;
+    alumno?: boolean;
+} | null);
+
+const accessByPrefix: Record<string, Array<'propietario' | 'tutor' | 'alumno'>> = {
+    dashboard: ['propietario'],
+    users: ['propietario'],
+    categorias: ['propietario'],
+    servicios: ['propietario'],
+    calendarios: ['tutor'],
+    sesiones: ['alumno', 'tutor'],
+    licencias: ['alumno', 'tutor', 'propietario'],
+    'informes-clase': ['tutor'],
+    catalogo: ['alumno'],
+    pagos: ['alumno', 'propietario'],
+    pagofacil: ['alumno', 'propietario'],
+    settings: ['alumno', 'tutor', 'propietario'],
+};
+
+const hasAccessToRoute = (routeName: string) => {
+    const prefix = routeName.split('.')[0];
+    const allowedRoles = accessByPrefix[prefix];
+
+    if (!allowedRoles) {
+        return false;
+    }
+
+    return allowedRoles.some((role) => !!userRoles.value?.[role]);
+};
+
 const normalize = (value: string) =>
     value
         .toLowerCase()
@@ -63,6 +95,7 @@ const routes = computed<SearchResult[]>(() => {
     return Object.entries(routeTable)
         .filter(([, definition]) => definition.methods.includes('GET'))
         .filter(([, definition]) => !definition.uri.includes('{'))
+        .filter(([name]) => hasAccessToRoute(name))
         .map(([name, definition]) => {
             let href = `/${definition.uri}`;
 

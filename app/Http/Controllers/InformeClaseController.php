@@ -12,7 +12,17 @@ class InformeClaseController extends Controller
 {
     public function index(Request $request)
     {
+
+         $id = auth()->user()->tutor->id;
+
+       /*  if($authUser = auth()->user()->isAdmin) {
+        
+        
+        } */
         $query = InformeClase::with('asistencia.inscripcion.alumno.usuario')
+            ->whereHas('asistencia.inscripcion.calendario', function ($query) use ($id) {
+                $query->where('id_tutor', $id);
+            })
             ->orderByDesc('created_at');
 
         if ($request->filled('search')) {
@@ -53,6 +63,11 @@ class InformeClaseController extends Controller
             'temas_vistos' => 'nullable|string',
             'tareas_asignadas' => 'nullable|string',
             'desempenio' => 'nullable|in:BAJO,MEDIO,ALTO,EXCELENTE',
+        ], [], [
+            'id_asistencia' => 'asistencia',
+            'temas_vistos' => 'temas vistos',
+            'tareas_asignadas' => 'tareas asignadas',
+            'desempenio' => 'desempeño',
         ]);
 
         InformeClase::create($validated);
@@ -87,6 +102,11 @@ class InformeClaseController extends Controller
             'temas_vistos' => 'nullable|string',
             'tareas_asignadas' => 'nullable|string',
             'desempenio' => 'nullable|in:BAJO,MEDIO,ALTO,EXCELENTE',
+        ], [], [
+            'id_asistencia' => 'asistencia',
+            'temas_vistos' => 'temas vistos',
+            'tareas_asignadas' => 'tareas asignadas',
+            'desempenio' => 'desempeño',
         ]);
 
         $informes_clase->update($validated);

@@ -48,6 +48,14 @@ class TutorController extends Controller
             'descripcion' => 'nullable|string',
             'duracion_semanas' => 'nullable|integer',
             'duracion_horas' => 'nullable|integer',
+        ], [], [
+            'nombre' => 'nombre',
+            'id_categoria' => 'categoría',
+            'costo_base' => 'costo base',
+            'modalidad' => 'modalidad',
+            'descripcion' => 'descripción',
+            'duracion_semanas' => 'duración en semanas',
+            'duracion_horas' => 'duración en horas',
         ]);
         // B. Creación
         Tutor::create($validated);
@@ -82,6 +90,13 @@ class TutorController extends Controller
             'modalidad' => 'required|in:VIRTUAL,PRESENCIAL,HIBRIDO',
             'estado_activo' => 'boolean', // Campo extra que suele editarse
             'descripcion' => 'nullable|string',
+        ], [], [
+            'nombre' => 'nombre',
+            'id_categoria' => 'categoría',
+            'costo_base' => 'costo base',
+            'modalidad' => 'modalidad',
+            'estado_activo' => 'estado activo',
+            'descripcion' => 'descripción',
         ]);
 
         $tutor->update($validated);

@@ -221,10 +221,10 @@ const irAPago = () => {
                         <label class="block text-sm mb-1">ID alumno (opcional)</label>
                         <input v-model="idAlumno" type="number" min="1" class="w-full px-3 py-2 border border-border rounded-lg bg-card" />
                     </div> -->
-                    <div v-if="!isCitaLibre">
+                    <!-- <div v-if="!isCitaLibre">
                         <label class="block text-sm mb-1">Fecha de inicio base</label>
                         <input v-model="fechaInicio" type="date" class="w-full px-3 py-2 border border-border rounded-lg bg-card" />
-                    </div>
+                    </div> -->
                     <div class="flex items-end">
                         <button class="w-full px-3 py-2 bg-primary text-primary-foreground rounded-lg" @click="recalcular">Recalcular sesiones</button>
                     </div>

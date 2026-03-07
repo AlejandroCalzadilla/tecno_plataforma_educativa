@@ -10,6 +10,9 @@ interface Sesion {
     id: number;
     fecha_sesion: string;
     numero_sesion: number;
+    hora_inicio?: string | null;
+    hora_fin?: string | null;
+    servicio_nombre?: string | null;
 }
 
 interface Licencia {
@@ -53,6 +56,7 @@ watch(() => formTutor.estado_aprobacion, (val) => {
 const esAlumno = computed(() => props.modo === 'alumno');
 const esTutorAdmin = computed(() => props.modo === 'tutor' || props.modo === 'admin');
 const requiereReprogramacion = computed(() => formTutor.estado_aprobacion === 'APROBADA');
+const licenciaAprobada = computed(() => props.licencia.estado_aprobacion === 'APROBADA');
 
 const estadoBadge = computed(() => ({
     PENDIENTE: 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300',
@@ -120,7 +124,7 @@ const submitTutor    = () => formTutor.put(route('licencias.update', props.licen
                             <select v-model="formAlumno.id_asistencia" class="w-full px-3 py-2 border border-border rounded-lg bg-card">
                                 <option value="">Seleccione</option>
                                 <option v-for="sesion in sesiones" :key="sesion.id" :value="String(sesion.id)">
-                                    #{{ sesion.id }} — {{ sesion.fecha_sesion }} (Sesión {{ sesion.numero_sesion }})
+                                    #{{ sesion.id }} — {{ sesion.servicio_nombre ?? 'Servicio sin nombre' }} | {{ sesion.fecha_sesion }} {{ sesion.hora_inicio ?? '--:--' }}-{{ sesion.hora_fin ?? '--:--' }} (Sesión {{ sesion.numero_sesion }})
                                 </option>
                             </select>
                             <p v-if="formAlumno.errors.id_asistencia" class="text-sm text-red-600 mt-1">{{ formAlumno.errors.id_asistencia }}</p>
@@ -150,7 +154,11 @@ const submitTutor    = () => formTutor.put(route('licencias.update', props.licen
                 <!-- Formulario TUTOR / ADMIN -->
                 <div v-if="esTutorAdmin" class="bg-card border border-border rounded-xl p-5">
                     <h2 class="font-semibold mb-4">Revisar licencia</h2>
+                    <div v-if="licenciaAprobada" class="rounded-lg border border-border bg-muted/40 p-3 text-sm text-muted-foreground">
+                        Esta licencia ya fue aprobada y no se puede editar.
+                    </div>
                     <form class="space-y-4" @submit.prevent="submitTutor">
+                        <fieldset :disabled="licenciaAprobada" class="space-y-4 disabled:opacity-70">
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div>
                                 <label class="block text-sm mb-1">Estado de aprobación</label>
@@ -203,6 +211,7 @@ const submitTutor    = () => formTutor.put(route('licencias.update', props.licen
                                 <span v-else>Guardar</span>
                             </button>
                         </div>
+                        </fieldset>
                     </form>
                 </div>
 

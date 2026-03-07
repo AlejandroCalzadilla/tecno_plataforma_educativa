@@ -63,6 +63,11 @@ class ServicioController extends Controller
 
             'modalidad' => 'required|in:VIRTUAL,PRESENCIAL,HIBRIDO',
             'descripcion' => 'nullable|string',
+        ], [], [
+            'nombre' => 'nombre',
+            'id_categoria' => 'categoría',
+            'modalidad' => 'modalidad',
+            'descripcion' => 'descripción',
         ]);
 
         // B. Creación
@@ -99,6 +104,11 @@ class ServicioController extends Controller
             'modalidad' => 'required|in:VIRTUAL,PRESENCIAL,HIBRIDO',
             'descripcion' => 'nullable|string',
 
+        ], [], [
+            'nombre' => 'nombre',
+            'id_categoria' => 'categoría',
+            'modalidad' => 'modalidad',
+            'descripcion' => 'descripción',
         ]);
 
         $servicio->update($validated);

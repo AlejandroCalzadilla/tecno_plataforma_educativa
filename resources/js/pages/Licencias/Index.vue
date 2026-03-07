@@ -10,6 +10,8 @@ interface Asistencia {
     id: number;
     sesion?: {
         fecha_sesion: string;
+        hora_inicio?: string | null;
+        hora_fin?: string | null;
         numero_sesion: number | null;
         calendario?: {
             servicio?: { nombre: string };
@@ -158,6 +160,7 @@ const eliminar = (id: number) => {
                             <tr class="border-b border-border text-left">
                                 <th class="py-2 pr-3">ID</th>
                                 <th class="py-2 pr-3">Sesión / Fecha</th>
+                                <th class="py-2 pr-3">Servicio</th>
                              <!--    <th v-if="modo !== 'alumno'" class="py-2 pr-3">Alumno</th> -->
                                 <th v-if="modo === 'admin'" class="py-2 pr-3">Tutor / Servicio</th>
                                 <th class="py-2 pr-3">Motivo</th>
@@ -171,7 +174,10 @@ const eliminar = (id: number) => {
                                 <td class="py-2 pr-3 text-muted-foreground">#{{ lic.id_licencia }}</td>
                                 <td class="py-2 pr-3">
                                     <div>Sesión #{{ lic.asistencia.id }}</div>
-                                    <div class="text-xs text-muted-foreground">{{ lic.asistencia.sesion?.fecha_sesion }}</div>
+                                    <div class="text-xs text-muted-foreground">{{ lic.asistencia.sesion?.fecha_sesion }} {{ lic.asistencia.sesion?.hora_inicio ?? '--:--' }}-{{ lic.asistencia.sesion?.hora_fin ?? '--:--' }}</div>
+                                </td>
+                                <td class="py-2 pr-3 text-xs">
+                                    {{ lic.asistencia.sesion?.calendario?.servicio?.nombre ?? '—' }}
                                 </td>
                                <!--  <td v-if="modo !== 'alumno'" class="py-2 pr-3 text-sm">
                                     {{ lic.asistencia.inscripcion?.alumno?.usuario?.name ?? '—' }}

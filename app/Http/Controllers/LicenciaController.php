@@ -89,7 +89,7 @@ class LicenciaController extends Controller
         $auth = request()->user();
 
         // Solo los alumnos pueden solicitar licencias
-        $query = Asistencia::with('sesion', 'inscripcion.alumno.usuario')
+        $query = Asistencia::with('sesion.calendario.servicio', 'inscripcion.alumno.usuario')
             ->whereDoesntHave('licencia');
 
         if ($auth?->is_alumno) {
@@ -106,7 +106,10 @@ class LicenciaController extends Controller
             'sesiones' => $sesiones->map(fn($a) => [
                 'id' => $a->id,
                 'fecha_sesion' => $a->sesion?->fecha_sesion,
+                'hora_inicio' => $a->sesion?->hora_inicio,
+                'hora_fin' => $a->sesion?->hora_fin,
                 'numero_sesion' => $a->sesion?->numero_sesion,
+                'servicio_nombre' => $a->sesion?->calendario?->servicio?->nombre,
             ])->values(),
         ]);
     }
@@ -121,6 +124,10 @@ class LicenciaController extends Controller
             'id_asistencia' => 'required|exists:asistencia,id|unique:licencia,id_asistencia',
             'motivo' => 'required|string',
             'evidencia_url' => 'nullable|image|max:4096',
+        ], [], [
+            'id_asistencia' => 'asistencia',
+            'motivo' => 'motivo',
+            'evidencia_url' => 'evidencia',
         ]);
 
         $evidenciaPath = null;
@@ -150,7 +157,7 @@ class LicenciaController extends Controller
 
         $licencia->load(['asistencia.sesion.calendario.disponibilidades']);
 
-        $sesiones = Asistencia::with('sesion', 'inscripcion.alumno.usuario')
+        $sesiones = Asistencia::with('sesion.calendario.servicio', 'inscripcion.alumno.usuario')
             ->where(fn($q) => $q->whereDoesntHave('licencia')->orWhere('id', $licencia->id_asistencia))
             ->orderByDesc('created_at')
             ->get();
@@ -174,7 +181,10 @@ class LicenciaController extends Controller
             'sesiones' => $sesiones->map(fn($a) => [
                 'id' => $a->id,
                 'fecha_sesion' => $a->sesion?->fecha_sesion,
+                'hora_inicio' => $a->sesion?->hora_inicio,
+                'hora_fin' => $a->sesion?->hora_fin,
                 'numero_sesion' => $a->sesion?->numero_sesion,
+                'servicio_nombre' => $a->sesion?->calendario?->servicio?->nombre,
             ])->values(),
             'fechaSugerida' => $fechaSugerida,
             'modo' => $modo,
@@ -190,6 +200,12 @@ class LicenciaController extends Controller
         $auth = $request->user();
         $modo = $this->resolverModo($request);
 
+        if ($modo !== 'alumno' && $licencia->estado_aprobacion === 'APROBADA') {
+            return Redirect::back()->withErrors([
+                'licencia' => 'No puedes editar una licencia que ya fue aprobada.',
+            ]);
+        }
+
         // ── Alumno: solo puede editar motivo / evidencia (si sigue PENDIENTE) ──
         if ($modo === 'alumno') {
             if ($licencia->estado_aprobacion !== 'PENDIENTE') {
@@ -203,6 +219,10 @@ class LicenciaController extends Controller
                 'id_asistencia' => 'required|exists:asistencia,id|unique:licencia,id_asistencia,' . $licencia->id_licencia . ',id_licencia',
                 'motivo' => 'required|string',
                 'evidencia_url' => 'nullable|image|max:4096',
+            ], [], [
+                'id_asistencia' => 'asistencia',
+                'motivo' => 'motivo',
+                'evidencia_url' => 'evidencia',
             ]);
              
             $payload = [
@@ -226,6 +246,10 @@ class LicenciaController extends Controller
             'estado_aprobacion' => 'required|in:PENDIENTE,APROBADA,RECHAZADA',
             'observacion_admin' => 'nullable|string',
             'fecha_reprogramacion' => 'nullable|date|after_or_equal:today',
+        ], [], [
+            'estado_aprobacion' => 'estado de aprobación',
+            'observacion_admin' => 'observación del administrador',
+            'fecha_reprogramacion' => 'fecha de reprogramación',
         ]);
 
         if ($validated['estado_aprobacion'] === 'APROBADA') {
@@ -240,17 +264,29 @@ class LicenciaController extends Controller
             // Buscar slot: fecha exacta pedida por tutor o la próxima disponible
             $slot = null;
             if ($request->filled('fecha_reprogramacion')) {
-                $slot = $this->buscarProximaSesionDisponible(
-                    $calendario,
-                    Carbon::parse($request->fecha_reprogramacion)->subDay(),
-                    $sesionOriginal->id,
-                    $request->fecha_reprogramacion,
-                );
-                if (!$slot) {
+                $fechaElegida = Carbon::parse($request->fecha_reprogramacion)->toDateString();
+
+                $yaReservada = SesionProgramada::query()
+                    ->where('id', '!=', $sesionOriginal->id)
+                    ->whereDate('fecha_sesion', $fechaElegida)
+                    ->where('hora_inicio', '<', $sesionOriginal->hora_fin)
+                    ->where('hora_fin', '>', $sesionOriginal->hora_inicio)
+                    ->whereHas('calendario', function ($q) use ($calendario) {
+                        $q->where('id_tutor', $calendario->id_tutor);
+                    })
+                    ->exists();
+
+                if ($yaReservada) {
                     return Redirect::back()->withErrors([
-                        'fecha_reprogramacion' => 'La fecha indicada no es un día disponible en el calendario o ya está ocupada.',
+                        'fecha_reprogramacion' => 'La fecha indicada ya está reservada para ese horario.',
                     ]);
                 }
+
+                $slot = [
+                    'fecha_sesion' => $fechaElegida,
+                    'hora_inicio' => $sesionOriginal->hora_inicio,
+                    'hora_fin' => $sesionOriginal->hora_fin,
+                ];
             } else {
                 $slot = $this->buscarProximaSesionDisponible(
                     $calendario,
@@ -386,14 +422,23 @@ class LicenciaController extends Controller
             $bloque = $disponibilidades->firstWhere('dia_semana', $diaActual);
 
             if ($bloque) {
-                $ocupada = Asistencia::query()
-                    ->join('sesion_programada', 'sesion_programada.id', '=', 'asistencia.id_sesion')
-                    ->where('sesion_programada.id_calendario', $calendario->id)
-                    ->whereDate('sesion_programada.fecha_sesion', $cursor->toDateString())
-                    ->where('sesion_programada.id', '!=', $excluyeId)
+                $ocupadaEnCalendario = SesionProgramada::query()
+                    ->where('id_calendario', $calendario->id)
+                    ->whereDate('fecha_sesion', $cursor->toDateString())
+                    ->where('id', '!=', $excluyeId)
                     ->exists();
 
-                if (!$ocupada) {
+                $choqueHorarioTutor = SesionProgramada::query()
+                    ->where('id', '!=', $excluyeId)
+                    ->whereDate('fecha_sesion', $cursor->toDateString())
+                    ->where('hora_inicio', '<', $bloque->hora_cierre)
+                    ->where('hora_fin', '>', $bloque->hora_apertura)
+                    ->whereHas('calendario', function ($q) use ($calendario) {
+                        $q->where('id_tutor', $calendario->id_tutor);
+                    })
+                    ->exists();
+
+                if (!$ocupadaEnCalendario && !$choqueHorarioTutor) {
                     return [
                         'fecha_sesion' => $cursor->toDateString(),
                         'hora_inicio' => $bloque->hora_apertura,

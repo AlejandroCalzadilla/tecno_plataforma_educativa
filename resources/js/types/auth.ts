@@ -9,7 +9,7 @@ export type User = {
     roles ?: {
         tutor?: boolean;
         alumno?: boolean;
-        admin?: boolean;
+        propietario?: boolean;
     };
     [key: string]: unknown;
 };

@@ -25,36 +25,48 @@ Route::get('dashboard', function () {
     if (auth()->user()->is_alumno) {
         return redirect()->route('catalogo.index');
     } elseif (auth()->user()->is_tutor) {
-        return redirect()->route('informes-clase.index');
+        return redirect()->route('calendarios.index');
     }
     return redirect()->route('dashboard.index');
 })->middleware(['auth', 'verified'])->name('dashboard');
 
 Route::get('dashboard/kpis', [DashboardController::class, 'index'])
-    ->middleware(['auth', 'verified'])
+    ->middleware(['auth', 'verified', 'role:propietario'])
     ->name('dashboard.index');
 
-Route::middleware(['auth', 'verified'])->prefix('dashboard')->name('dashboard.')->group(function () {
+Route::middleware(['auth', 'verified', 'role:propietario'])->prefix('dashboard')->name('dashboard.')->group(function () {
     Route::get('export/pdf', [DashboardController::class, 'exportPdf'])->name('export.pdf');
     Route::get('export/excel', [DashboardController::class, 'exportExcel'])->name('export.excel');
 });
 
 require __DIR__ . '/settings.php';
 
+Route::middleware(['auth', 'verified', 'role:propietario'])->group(function () {
+    Route::resource('users', UserController::class);
+    Route::resource('categorias', CategoriaController::class);
+    Route::resource('servicios', ServicioController::class);
+});
 
-Route::resource('users', UserController::class);
-Route::resource('categorias', CategoriaController::class);
-Route::resource('servicios', ServicioController::class);
-Route::resource('calendarios', CalendarioController::class);
-Route::resource('licencias', LicenciaController::class);
-Route::resource('informes-clase', InformeClaseController::class);
+Route::middleware(['auth', 'verified', 'role:tutor'])->group(function () {
+    Route::resource('calendarios', CalendarioController::class);
+    Route::resource('informes-clase', InformeClaseController::class);
+});
+
+Route::middleware(['auth', 'verified', 'role:tutor,alumno,propietario'])->group(function () {
+    Route::resource('licencias', LicenciaController::class);   
+});
 
 
-Route::middleware(['auth', 'verified'])->group(function () {
-    Route::get('pagos/cuotas-vencidas', [PagoController::class, 'forzado'])->name('pagos.forzado');
+Route::middleware(['auth', 'verified', 'role:alumno,propietario'])->group(function () {   
     Route::get('pagos', [PagoController::class, 'index'])->name('pagos.index');
     Route::post('pagos/cuotas/{cuota}/pagar', [PagoController::class, 'pagarCuota'])->name('pagos.pagar-cuota');
-    
+});
+
+ Route::middleware(['auth', 'verified', 'role:alumno'])->group(function () { 
+ Route::get('pagos/cuotas-vencidas', [PagoController::class, 'forzado'])->name('pagos.forzado');
+ });
+
+ Route::middleware(['auth', 'verified', 'role:alumno,tutor'])->group(function () {
     Route::get('sesiones', [SesionProgramadaController::class, 'index'])->name('sesiones.index');
     Route::get('sesiones/{sesion}', [SesionProgramadaController::class, 'show'])->name('sesiones.show');
     Route::patch('sesiones/{sesion}/link', [SesionProgramadaController::class, 'updateLink'])
@@ -72,14 +84,14 @@ Route::post('pagofacil/callback', [PagoFacilController::class, 'callback'])
     ->name('pagofacil.callback')
     ->withoutMiddleware(['web']);
 
-Route::middleware(['auth', 'verified'])->prefix('pagofacil')->name('pagofacil.')->group(function () {
+Route::middleware(['auth', 'verified', 'role:alumno,propietario'])->prefix('pagofacil')->name('pagofacil.')->group(function () {
     Route::post('generar-qr',      [PagoFacilController::class, 'generarQR'])->name('generar-qr');
     Route::post('consultar',       [PagoFacilController::class, 'consultarEstado'])->name('consultar');
     Route::post('confirmar',       [PagoFacilController::class, 'confirmarPagoCuota'])->name('confirmar');
     Route::post('verificar-cuota', [PagoFacilController::class, 'verificarCuota'])->name('verificar-cuota');
 });
 
-Route::prefix('catalogo')->name('catalogo.')->group(function () {
+Route::middleware(['auth', 'verified', 'role:alumno'])->prefix('catalogo')->name('catalogo.')->group(function () {
     Route::get('/', [CatalogoController::class, 'index'])->name('index');
     Route::get('/servicios/{servicio}', [CatalogoController::class, 'show'])->name('servicio.show');
     Route::get('/calendarios/{calendario}/preinscripcion', [CatalogoController::class, 'previewInscripcion'])->name('inscripcion.preview');

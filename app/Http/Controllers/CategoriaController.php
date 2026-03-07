@@ -12,7 +12,7 @@ class CategoriaController extends Controller
     public function index(Request $request)
     {
         $query = CategoriaNivel::orderBy('created_at', 'desc');
-         
+
         // Filtro por búsqueda (nombre)
         if ($request->filled('search')) {
             $search = $request->input('search');
@@ -55,6 +55,9 @@ class CategoriaController extends Controller
         $validated = $request->validate([
             'nombre' => 'required|string|max:100',
             'id_categoria_padre' => 'nullable|exists:categorianivel,id',
+        ], [], [
+            'nombre' => 'nombre de la categoría',
+            'id_categoria_padre' => 'categoría padre',
         ]);
         // B. Creación
         CategoriaNivel::create($validated);
@@ -82,10 +85,13 @@ class CategoriaController extends Controller
     public function update(Request $request, CategoriaNivel $categoria)
     {
         // Validación similar al store
-        $validated = $request->validate([
-            'nombre' => 'required|string|max:100',
-            'id_categoria_padre' => 'nullable|exists:categorianivel,id',
-        ]);
+            $validated = $request->validate([
+                'nombre' => 'required|string|max:100',
+                'id_categoria_padre' => 'nullable|exists:categorianivel,id',
+            ], [], [
+                'nombre' => 'nombre de la categoría',
+                'id_categoria_padre' => 'categoría padre',
+            ]);
         $categoria->update($validated);
         return Redirect::route('categorias.index')->with('success', 'Categoría actualizada correctamente.');
     }
@@ -95,7 +101,7 @@ class CategoriaController extends Controller
      */
     public function destroy(CategoriaNivel $categoria)
     {
-      
+
         // Desactiva la categoría y sus hijos
         $categoriaFind = CategoriaNivel::find($categoria->id);
         if ($categoriaFind->estado == false) {

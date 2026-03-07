@@ -3,7 +3,7 @@ import { Form, Head, Link, router, usePage } from '@inertiajs/vue3';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { type BreadcrumbItem } from '@/types';
 import UserLayout from '@/layouts/UserLayout.vue';
-import { ref } from 'vue';
+import { computed, ref } from 'vue';
 import Button from '@/components/ui/button/Button.vue';
 import { route } from 'ziggy-js';
 
@@ -71,6 +71,8 @@ const breadcrumbItems: BreadcrumbItem[] = [
 
 const page = usePage();
 const user = page.props.auth.user;
+console.log('Usuario autenticado:', user.roles);
+const isAdmin = computed(() => !!user?.roles?.propietario);
 
 
 const applyFilters = () => {
@@ -107,7 +109,16 @@ const confirm = (message: string) => {
 
         <UserLayout>
             <div class="bg-card border border-border rounded-xl shadow-sm overflow-hidden">
-                <h2 class="p-6 text-lg font-bold text-foreground mb-4">Filtrar Usuarios</h2>
+                <div class="p-6 flex items-center justify-between mb-4">
+                    <h2 class="text-lg font-bold text-foreground">Filtrar Usuarios</h2>
+                    <Link
+                        v-if="isAdmin"
+                        :href="route('users.create')"
+                        class="px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-medium hover:bg-primary/90 transition"
+                    >
+                        + Crear tutor
+                    </Link>
+                </div>
 
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4 p-4">
                     <!-- Input de búsqueda -->

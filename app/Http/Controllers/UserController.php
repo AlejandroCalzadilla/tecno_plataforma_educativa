@@ -3,13 +3,13 @@
 namespace App\Http\Controllers;
 
 use App\Models\Alumno;
-use App\Models\Servicio;
-use App\Models\CategoriaNivel;
 use App\Models\Tutor;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Illuminate\Support\Facades\Redirect;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
 
 class UserController extends Controller
 {
@@ -50,11 +50,9 @@ class UserController extends Controller
      */
     public function create()
     {
-        // Necesitamos las categorías para llenar el <select> del formulario
-        $categorias = CategoriaNivel::all();
-        return Inertia::render('Users/Create', [
-            'categorias' => $categorias
-        ]);
+        abort_unless(auth()->check() && auth()->user()->is_propietario, 403);
+
+        return Inertia::render('Users/Create');
     }
 
     /**
@@ -62,21 +60,45 @@ class UserController extends Controller
      */
     public function store(Request $request)
     {
-        // A. Validación
+        abort_unless($request->user() && $request->user()->is_propietario, 403);
+
         $validated = $request->validate([
-            'nombre' => 'required|string|max:150',
-            'id_categoria' => 'required|exists:CategoriaNivel,id', // Valida que la FK exista
-            'costo_base' => 'required|numeric|min:0',
-            'modalidad' => 'required|in:VIRTUAL,PRESENCIAL,HIBRIDO',
-            'descripcion' => 'nullable|string',
-            'duracion_semanas' => 'nullable|integer',
-            'duracion_horas' => 'nullable|integer',
+            'name' => 'required|string|max:150',
+            'email' => 'required|email|max:255|unique:users,email',
+            'password' => 'required|string|min:8|confirmed',
+            'especialidad' => 'nullable|string|max:100',
+            'biografia' => 'nullable|string',
+            'banco_nombre' => 'nullable|string|max:100',
+            'banco_cbu' => 'nullable|string|max:50',
+        ], [], [
+            'name' => 'nombre',
+            'email' => 'correo electrónico',
+            'password' => 'contraseña',
+            'especialidad' => 'especialidad',
+            'biografia' => 'biografía',
+            'banco_nombre' => 'nombre del banco',
+            'banco_cbu' => 'CBU',
         ]);
-        // B. Creación
-        Tutor::create($validated);
-        // C. Redirección con Mensaje Flash
-        // Inertia intercepta esto y lo pasa al frontend sin recargar
-        return Redirect::route('tutores.index')->with('success', 'Tutor creado correctamente.');
+
+        DB::transaction(function () use ($validated) {
+            $user = User::create([
+                'name' => $validated['name'],
+                'email' => $validated['email'],
+                'password' => Hash::make($validated['password']),
+                'is_alumno' => false,
+                'is_tutor' => true,
+            ]);
+
+            Tutor::create([
+                'id_usuario' => $user->id,
+                'especialidad' => $validated['especialidad'] ?? null,
+                'biografia' => $validated['biografia'] ?? null,
+                'banco_nombre' => $validated['banco_nombre'] ?? null,
+                'banco_cbu' => $validated['banco_cbu'] ?? null,
+            ]);
+        });
+
+        return Redirect::route('users.index')->with('success', 'Tutor creado correctamente.');
     }
 
     /**
@@ -121,6 +143,22 @@ class UserController extends Controller
             'biografia' => 'nullable|string',
             'banco_nombre' => 'nullable|string|max:100',
             'banco_cbu' => 'nullable|string|max:50',
+        ], [
+            'name.required' => 'El nombre es requerido',
+            'email.required' => 'El correo electrónico es requerido',
+        ], [
+            'name' => 'nombre',
+            'email' => 'correo electrónico',
+            'is_alumno' => 'es alumno',
+            'is_tutor' => 'es tutor',
+            'is_propietario' => 'es propietario',
+            'direccion' => 'dirección',
+            'fecha_nacimiento' => 'fecha de nacimiento',
+            'nivel_educativo' => 'nivel educativo',
+            'especialidad' => 'especialidad',
+            'biografia' => 'biografía',
+            'banco_nombre' => 'nombre del banco',
+            'banco_cbu' => 'CBU',
         ]);
 
         // Actualizar datos del usuario
@@ -166,12 +204,12 @@ class UserController extends Controller
      */
     public function destroy(User $user)
     {
-        
+
         $user->delete();
 
         // Asegúrate de usar redirect() o Redirect::route()
         return Redirect::route('users.index');
     }
 
-    
+
 }
