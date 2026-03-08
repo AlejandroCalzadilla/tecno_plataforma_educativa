@@ -9,8 +9,6 @@ import {
 } from '@/components/ui/dropdown-menu';
 import UserInfo from '@/components/UserInfo.vue';
 import type { User } from '@/types';
-import { logout } from '@/routes';
-import { edit } from '@/routes/profile';
 import { route } from 'ziggy-js';
 
 type Props = {
@@ -44,6 +42,7 @@ defineProps<Props>();
         <Link
             class="block w-full cursor-pointer"
             :href="route('logout')"
+            method="post"
             @click="handleLogout"
             as="button"
             data-test="logout-button"
