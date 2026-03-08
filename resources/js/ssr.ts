@@ -7,6 +7,12 @@ import { renderToString } from 'vue/server-renderer';
 
 const appName = import.meta.env.VITE_APP_NAME || 'Laravel';
 
+const resolvePagePath = (name: string): string => {
+    const normalizedName = name.includes('/') ? name : name.replace(/\./g, '/');
+
+    return `./pages/${normalizedName}.vue`;
+};
+
 createServer(
     (page) =>
         createInertiaApp({
@@ -15,7 +21,7 @@ createServer(
             title: (title) => (title ? `${title} - ${appName}` : appName),
             resolve: (name) =>
                 resolvePageComponent(
-                    `./pages/${name}.vue`,
+                    resolvePagePath(name),
                     import.meta.glob<DefineComponent>('./pages/**/*.vue'),
                 ),
             setup: ({ App, props, plugin }) =>

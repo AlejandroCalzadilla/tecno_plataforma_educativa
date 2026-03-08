@@ -47,13 +47,17 @@ class CatalogoController extends Controller
 
         $servicios = $query->paginate(9)->withQueryString();
         $categorias = CategoriaNivel::get();
-        return Inertia::render('Catalogo/Index', [
+        return Inertia::render('Catalogo.Index', [
             'servicios' => $servicios,
             'categorias' => $categorias,
             'filters' => $request->only(['search', 'modalidad']),
         ]);
     }
 
+
+
+
+    
     public function show(Request $request, Servicio $servicio)
     {
 
