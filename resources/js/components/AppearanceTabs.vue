@@ -33,10 +33,10 @@ const modes = [
 ] as const;
 
 const colorThemes = [
-    { value: 'blue', label: 'Azul', color: 'bg-blue-500' },
-    { value: 'green', label: 'Verde', color: 'bg-green-500' },
+    { value: 'blue', label: 'Adultos', color: 'bg-blue-500' },
+    { value: 'green', label: 'Jovenes', color: 'bg-green-500' },
     { value: 'purple', label: 'Morado', color: 'bg-purple-500' },
-    { value: 'kids', label: 'Kids', color: 'bg-pink-500' },
+    { value: 'kids', label: 'Niños', color: 'bg-pink-500' },
 ] as const;
 
 const handleSelect = (value: string) => {

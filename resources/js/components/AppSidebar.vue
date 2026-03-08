@@ -134,7 +134,7 @@ const sidebarContentClass = "kids:bg-[url('data:image/svg+xml,%3Csvg width=%2760
             <SidebarMenu>
                 <SidebarMenuItem>
                     <SidebarMenuButton size="lg" as-child>
-                        <Link :href="dashboard()">
+                        <Link :href="route('dashboard')">
                             <AppLogo />
                         </Link>
                     </SidebarMenuButton>

@@ -10,23 +10,24 @@ import { edit as editAppearance } from '@/routes/appearance';
 import { edit as editProfile } from '@/routes/profile';
 import { show } from '@/routes/two-factor';
 import { edit as editPassword } from '@/routes/user-password';
+import { route } from 'ziggy-js';
 
 const sidebarNavItems: NavItem[] = [
     {
         title: 'Profile',
-        href: editProfile(),
+        href: route('profile.edit'),
     },
     {
         title: 'Password',
-        href: editPassword(),
+        href: route('password.edit'),
     },
     {
         title: 'Two-Factor Auth',
-        href: show(),
+        href: route('two-factor.show'),
     },
     {
         title: 'Appearance',
-        href: editAppearance(),
+        href: route('appearance.edit'),
     },
 ];
 
