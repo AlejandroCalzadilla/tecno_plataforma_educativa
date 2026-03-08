@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted } from 'vue';
 import axios from 'axios';
+import { route } from 'ziggy-js';
 
 const props = defineProps<{
     idCuota: number;
@@ -38,7 +39,7 @@ const generarQR = async () => {
     mensajeError.value = '';
 
     try {
-        const data = await apiFetch('/pagofacil/generar-qr', { id_cuota: props.idCuota });
+        const data = await apiFetch(route('pagofacil.generar-qr'), { id_cuota: props.idCuota });
 
         if (!data.success) throw new Error(data.message ?? 'Error al generar QR');
 
@@ -67,7 +68,7 @@ const iniciarPolling = () => {
     pollingInterval = setInterval(async () => {
         try {
             // Verificar si el callback de PagoFácil ya marcó la cuota como PAGADO en nuestra BD
-            const data = await apiFetch('/pagofacil/verificar-cuota', { id_cuota: props.idCuota });
+            const data = await apiFetch(route('pagofacil.verificar-cuota'), { id_cuota: props.idCuota });
             if (data.success && data.pagada) {
                 detenerPolling();
                 estado.value = 'pagado';
@@ -83,7 +84,7 @@ const confirmarPago = async () => {
     estado.value = 'esperando';
 
     try {
-        const data = await apiFetch('/pagofacil/confirmar', {
+        const data = await apiFetch(route('pagofacil.confirmar'), {
             id_cuota:       props.idCuota,
             transaction_id: transactionId.value,
             nro_pago:       nroPago.value,

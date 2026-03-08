@@ -80,22 +80,11 @@ class CalendarioController extends Controller
             'disponibilidades.*.hora_apertura' => 'required|date_format:H:i',
             'disponibilidades.*.hora_cierre' => 'required|date_format:H:i|after:disponibilidades.*.hora_apertura',
         ], [
+            'id_servicio.required' => 'El campo servicio es obligatorio.',
             'disponibilidades.required' => 'Debes registrar al menos una disponibilidad.',
             'disponibilidades.min' => 'Debes registrar al menos una disponibilidad.',
             'numero_sesiones.required_if' => 'El número de sesiones es obligatorio para paquetes fijos.',
             
-        ], [
-            'id_servicio' => 'servicio',
-            'tipo_programacion' => 'tipo de programación',
-            'fecha_inicio' => 'fecha de inicio',
-            'numero_sesiones' => 'número de sesiones',
-            'duracion_sesion_minutos' => 'duración de la sesión (minutos)',
-            'costo_total' => 'costo total',
-            'cupos_maximos' => 'cupos máximos',
-            'disponibilidades' => 'disponibilidades',
-            'disponibilidades.*.dia_semana' => 'día de la semana',
-            'disponibilidades.*.hora_apertura' => 'hora de apertura',
-            'disponibilidades.*.hora_cierre' => 'hora de cierre',
         ]);
 
         if ($this->tieneCruceDisponibilidadTutor($tutorId, $validated['disponibilidades'])) {
