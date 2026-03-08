@@ -43,7 +43,7 @@ class CalendarioController extends Controller
         //dd($calendarios);
         $servicios = Servicio::all();
         $tutores = Tutor::with('usuario:id,name')->get();
-        return Inertia::render('Calendarios.Index', [
+        return Inertia::render('Calendarios/Index', [
             'calendarios' => $calendarios,
             'servicios' => $servicios,
             'tutores' => $tutores,

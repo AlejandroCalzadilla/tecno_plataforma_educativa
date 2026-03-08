@@ -87,7 +87,7 @@ const breadcrumbItems: BreadcrumbItem[] = [
 
 const page = usePage();
 const applyFilters = () => {
-    router.visit('/categorias', {
+    router.visit(route('categorias.index'), {
         data: {
             search: searchQuery.value,
             id_categoria_padre: selectedCategoriaPadre.value,

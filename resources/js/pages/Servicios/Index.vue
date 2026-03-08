@@ -129,7 +129,7 @@ const deleteServicio = (id: number) => {
 
 // Filtros
 const applyFilters = () => {
-    router.visit('/servicios', {
+    router.visit(route('servicios.index'), {
         data: {
             search: searchQuery.value,
             id_categoria: selectedCategoria.value,

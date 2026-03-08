@@ -76,7 +76,7 @@ const isAdmin = computed(() => !!user?.roles?.propietario);
 
 
 const applyFilters = () => {
-    router.visit('/users', {
+    router.visit(route('users.index'), {
         data: {
             search: searchQuery.value,
             role: selectedRole.value,

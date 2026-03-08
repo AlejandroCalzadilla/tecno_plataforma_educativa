@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { router } from '@inertiajs/vue3';
 import { reactive } from 'vue';
+import { route } from 'ziggy-js';
 
 const props = defineProps<{
     filtros: {
@@ -16,8 +17,7 @@ const props = defineProps<{
 const form = reactive({ ...props.filtros });
 
 function aplicar() {
-    router.get(
-        '/dashboard/kpis',
+    router.get(route('dashboard.kpis'),
         {
             desde: form.desde,
             hasta: form.hasta,

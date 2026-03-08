@@ -25,7 +25,7 @@ const userRoles = computed(() => page.props.auth.user.roles);
 const allNavItems: (NavItem & { role?: string[] })[] = [
     {
         title: 'Dashboard',
-        href: dashboard(),
+        href: route('dashboard'),
         icon: LayoutGrid,
         role: ['propietario'], // Admin y tutor
     },
