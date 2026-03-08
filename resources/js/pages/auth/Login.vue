@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Spinner } from '@/components/ui/spinner';
 import AuthBase from '@/layouts/AuthLayout.vue';
+import { route } from 'ziggy-js';
 
 defineProps<{
     status?: string;
@@ -31,7 +32,7 @@ defineProps<{
         </div>
 
         <Form
-            action="login"
+            :action="route('login')"
             method="post"
             :reset-on-success="['password']"
             v-slot="{ errors, processing }"
@@ -58,7 +59,7 @@ defineProps<{
                         <Label for="password">Contraseña</Label>
                         <TextLink
                             v-if="canResetPassword"
-                            href="forgot-password"
+                            :href="route('password.request')"
                             class="text-sm"
                             :tabindex="5"
                         >
