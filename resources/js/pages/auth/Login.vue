@@ -8,9 +8,6 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Spinner } from '@/components/ui/spinner';
 import AuthBase from '@/layouts/AuthLayout.vue';
-import { register } from '@/routes';
-import { store } from '@/routes/login';
-import { request } from '@/routes/password';
 
 defineProps<{
     status?: string;
@@ -34,7 +31,8 @@ defineProps<{
         </div>
 
         <Form
-            v-bind="store.form()"
+            action="login"
+            method="post"
             :reset-on-success="['password']"
             v-slot="{ errors, processing }"
             class="flex flex-col gap-6"
@@ -60,7 +58,7 @@ defineProps<{
                         <Label for="password">Contraseña</Label>
                         <TextLink
                             v-if="canResetPassword"
-                            :href="request()"
+                            href="forgot-password"
                             class="text-sm"
                             :tabindex="5"
                         >
@@ -103,7 +101,7 @@ defineProps<{
                 v-if="canRegister"
             >
                 ¿No tienes una cuenta?
-                <TextLink :href="register()" :tabindex="5">Registrarse</TextLink>
+                <TextLink href="register" :tabindex="5">Registrarse</TextLink>
             </div>
         </Form>
     </AuthBase>
