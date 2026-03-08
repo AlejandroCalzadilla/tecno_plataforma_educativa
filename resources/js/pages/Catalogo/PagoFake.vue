@@ -100,7 +100,7 @@ const detenerPolling = () => {
 const iniciarPolling = (idCuota: number) => {
     pollingTimer = setInterval(async () => {
         try {
-            const { data } = await axios.post('/pagofacil/verificar-cuota', { id_cuota: idCuota });
+            const { data } = await axios.post(route('pagofacil.verificar-cuota'), { id_cuota: idCuota });
             if (data.success && data.pagada) {
                 detenerPolling();
                 qrEstado.value = 'pagado';
@@ -145,7 +145,7 @@ const confirmarPago = async () => {
             qrMonto.value   = ins.monto;
 
             // Paso 2: generar QR con PagoFácil
-            const { data: qr } = await axios.post('/pagofacil/generar-qr', { id_cuota: ins.id_cuota });
+            const { data: qr } = await axios.post(route('pagofacil.generar-qr'), { id_cuota: ins.id_cuota });
             if (!qr.success) throw new Error(qr.message ?? 'Error al generar QR');
 
             qrImage.value  = qr.qr_image;
